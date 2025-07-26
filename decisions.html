@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Daily Decisions - Space Tribe MULE</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="client.js" defer></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      background: linear-gradient(to bottom, #f0f0f0, #ffffff);
+      color: #000;
+      font-family: 'Space Mono', monospace;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+    
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: 
+        radial-gradient(2px 2px at 20px 30px, #000, transparent),
+        radial-gradient(2px 2px at 40px 70px, #000, transparent),
+        radial-gradient(1px 1px at 50px 160px, #000, transparent),
+        radial-gradient(1px 1px at 130px 40px, #000, transparent),
+        radial-gradient(2px 2px at 80px 10px, #000, transparent);
+      background-size: 200px 200px;
+      animation: stars 120s linear infinite;
+      z-index: -2;
+    }
+    
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(ellipse at bottom, #ffffff, #f0f0f0);
+      z-index: -1;
+    }
+    
+    @keyframes stars {
+      from { transform: translateY(0px); }
+      to { transform: translateY(-200px); }
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      position: relative;
+      z-index: 1;
+    }
+    
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 30px;
+      background: linear-gradient(45deg, #00a8ff, #ff00ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(0, 168, 255, 0.5);
+      animation: glow 2s ease-in-out infinite alternate;
+    }
+    
+    @keyframes glow {
+      from { filter: brightness(1); }
+      to { filter: brightness(1.2); }
+    }
+    
+    .game-section {
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid #00a8ff;
+      border-radius: 15px;
+      padding: 25px;
+      margin-bottom: 25px;
+      box-shadow: 0 0 20px rgba(0, 168, 255, 0.3),
+                  inset 0 0 20px rgba(0, 168, 255, 0.1);
+      backdrop-filter: blur(5px);
+    }
+    
+    h3 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.5rem;
+      color: #00a8ff;
+      margin-bottom: 15px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    
+    p {
+      color: #333;
+      margin-bottom: 15px;
+      line-height: 1.6;
+    }
+    
+    .material-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    .material-card {
+      background: #f9f9f9;
+      border: 1px solid;
+      border-radius: 10px;
+      padding: 20px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .material-card.blue-gems {
+      border-color: #00a8ff;
+    }
+    
+    .material-card.red-rubies {
+      border-color: #ff0040;
+    }
+    
+    .material-card.white-diamonds {
+      border-color: #000000;
+    }
+    
+    .material-card.green-poison {
+      border-color: #008000;
+    }
+    
+    .material-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+    }
+    
+    .material-label {
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: block;
+      margin-bottom: 10px;
+    }
+    
+    .material-label.blue-gems { color: #00a8ff; }
+    .material-label.red-rubies { color: #ff0040; }
+    .material-label.white-diamonds { color: #000; }
+    .material-label.green-poison { color: #008000; }
+    
+    input[type="number"], select {
+      width: 100%;
+      padding: 10px;
+      background: #f0f0f0;
+      border: 1px solid #00a8ff;
+      border-radius: 5px;
+      color: #000;
+      font-family: 'Space Mono', monospace;
+      margin: 5px 0;
+      transition: all 0.3s ease;
+    }
+    
+    input[type="number"]:focus, select:focus {
+      outline: none;
+      border-color: #ff00ff;
+      box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+    }
+    
+    .stockpile, .price {
+      display: block;
+      margin: 5px 0;
+      font-size: 0.9rem;
+    }
+    
+    .stockpile {
+      color: #666;
+    }
+    
+    .price {
+      color: #006600;
+      font-weight: bold;
+    }
+    
+    .sell-btn {
+      padding: 8px 16px;
+      margin: 2px;
+      background: #ccc;
+      border: 1px solid;
+      border-radius: 5px;
+      color: #000;
+      cursor: pointer;
+      font-family: 'Space Mono', monospace;
+      transition: all 0.3s ease;
+    }
+    
+    .sell-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    }
+    
+    .sell-btn:active {
+      transform: translateY(1px);
+    }
+    
+    .sell-btn.blue-gems {
+      background-color: #00a8ff;
+      border-color: #00a8ff;
+    }
+    
+    .sell-btn.red-rubies {
+      background-color: #ff0040;
+      border-color: #ff0040;
+    }
+    
+    .sell-btn.white-diamonds {
+      background-color: #ffffff;
+      border-color: #ffffff;
+    }
+    
+    .sell-btn.green-poison {
+      background-color: #00ff40;
+      border-color: #00ff40;
+    }
+    
+    .raid-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    
+    .upgrade-card {
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid #ff00ff;
+      border-radius: 10px;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: all 0.3s ease;
+    }
+    
+    .upgrade-card:hover {
+      background: rgba(255, 0, 255, 0.1);
+      box-shadow: 0 0 20px rgba(255, 0, 255, 0.3);
+    }
+    
+    input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    
+    #submitBtn {
+      display: block;
+      width: 100%;
+      padding: 20px;
+      margin: 30px 0;
+      background: linear-gradient(45deg, #00a8ff, #ff00ff);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 1.2rem;
+      font-weight: 700;
+      font-family: 'Orbitron', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    #submitBtn::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: width 0.3s, height 0.3s;
+    }
+    
+    #submitBtn:hover::before {
+      width: 300px;
+      height: 300px;
+    }
+    
+    #submitBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 20px rgba(0, 168, 255, 0.5);
+    }
+    
+    #error {
+      color: #ff0040;
+      text-align: center;
+      font-weight: bold;
+      padding: 10px;
+      border-radius: 5px;
+      background: rgba(255, 0, 64, 0.1);
+      border: 1px solid #ff0040;
+      display: none;
+    }
+    
+    #error:not(:empty) {
+      display: block;
+    }
+    
+    .back-btn {
+      display: inline-block;
+      padding: 15px 30px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 2px solid #00a8ff;
+      border-radius: 10px;
+      color: #00a8ff;
+      text-decoration: none;
+      font-family: 'Orbitron', sans-serif;
+      font-weight: 700;
+      transition: all 0.3s ease;
+    }
+    
+    .back-btn:hover {
+      background: #00a8ff;
+      color: #000;
+      box-shadow: 0 0 20px #00a8ff;
+    }
+  </style>
+</head>
+<body onload="loadDecisions()">
+  <div class="container">
+    <h1>🚀 SPACE TRIBE MULE 🚀</h1>
+    <p>Player: <span id="player-name"></span> | Effort Points Remaining: <span id="effort-points">10</span></p>
+    
+    <div class="game-section">
+      <h3>🤖 Deploy Mining Robots (Total: 10 Robots)</h3>
+      <p>Send out up to 10 Mining Robots across materials to mine them. More robots = more yield, but too many from players lowers prices.</p>
+      
+      <div class="material-grid">
+        <div class="material-card blue-gems">
+          <span class="material-label blue-gems">🔷 Blue Gems</span>: Energy
+          <input type="number" id="eff_bluegems" min="0" max="10" placeholder="0" title="Blue Gems power ships and tech—high demand early game.">
+        </div>
+        
+        <div class="material-card red-rubies">
+          <span class="material-label red-rubies">🔻 Red Rubies</span>: Building
+          <input type="number" id="eff_redrubies" min="0" max="10" placeholder="0" title="Red Rubies for structures and defenses—steady value, but oversupply crashes it.">
+        </div>
+        
+        <div class="material-card white-diamonds">
+          <span class="material-label white-diamonds" style="color:#000">💎 White Diamonds</span>: Tech
+          <input type="number" id="eff_whitediamonds" min="0" max="10" placeholder="0"
+                 title="White Diamonds for upgrades and raids—rare, volatile prices.">
+        </div>
+        
+        <div class="material-card green-poison">
+          <span class="material-label green-poison">🌱 Green Poison</span>: Food
+          <input type="number" id="eff_greenpoison" min="0" max="10" placeholder="0" title="Green Poison for tribe survival—always valuable, but events can boost/drop it.">
+        </div>
+      </div>
+    </div>
+    
+    <div class="game-section">
+      <h3>💰 Market Trading</h3>
+      <p>Sell your stockpiles at current market prices. Choose wisely - prices fluctuate based on supply and demand!</p>
+      
+      <div class="material-grid">
+        <div class="material-card blue-gems">
+          <span class="material-label blue-gems">🔷 Blue Gems</span>
+          <span id="stock_sell_bluegems" class="stockpile">Stockpile: 0</span>
+          <span id="price_bluegems" class="price">Value: 10 coins</span>
+          <input type="number" id="sell_bluegems" min="0" title="Sell Blue Gems now—prices may change after mining!">
+        </div>
+        
+        <div class="material-card red-rubies">
+          <span class="material-label red-rubies">🔻 Red Rubies</span>
+          <span id="stock_sell_redrubies" class="stockpile">Stockpile: 0</span>
+          <span id="price_redrubies" class="price">Value: 10 coins</span>
+          <input type="number" id="sell_redrubies" min="0" title="Sell Red Rubies now—prices may change after mining!">
+        </div>
+        
+        <div class="material-card white-diamonds">
+          <span class="material-label white-diamonds">💎 White Diamonds</span>
+          <span id="stock_sell_whitediamonds" class="stockpile">Stockpile: 0</span>
+          <span id="price_whitediamonds" class="price">Value: 10 coins</span>
+          <input type="number" id="sell_whitediamonds" min="0" title="Sell White Diamonds now—prices may change after mining!">
+        </div>
+        
+        <div class="material-card green-poison">
+          <span class="material-label green-poison">🌱 Green Poison</span>
+          <span id="stock_sell_greenpoison" class="stockpile">Stockpile: 0</span>
+          <span id="price_greenpoison" class="price">Value: 10 coins</span>
+          <input type="number" id="sell_greenpoison" min="0" title="Sell Green Poison now—prices may change after mining!">
+        </div>
+      </div>
+    </div>
+    
+    <div class="game-section">
+      <h3>⚔️ Raid Operations</h3>
+      <p>Attempt to steal up to 5 units of a material from a target tribe. Success chance: 50% base, reduced by their defenses.</p>
+      
+      <div class="raid-section">
+        <div>
+          <label style="color: #ff00ff;">Target Tribe:</label>
+          <select id="raid_target">
+            <option value="">None</option>
+          </select>
+        </div>
+        <div>
+          <label style="color: #ff00ff;">Target Material:</label>
+          <select id="raid_mineral">
+            <option value="bluegems">🔷 Blue Gems</option>
+            <option value="redrubies">🔻 Red Rubies</option>
+            <option value="whitediamonds">💎 White Diamonds</option>
+            <option value="greenpoison">🌱 Green Poison</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <div class="game-section">
+      <h3>🔧 Tech Upgrades</h3>
+      <p>Invest coins in upgrades. Miner boosts mining yield (+10% per level). Defense reduces raid success against you (-5% per level).</p>
+      <p style="color: #006600;">Cost Formula: 500 × (current level + 1) coins</p>
+      
+      <div class="material-grid">
+        <div class="upgrade-card">
+          <input type="checkbox" id="up_miner" title="Improves mining efficiency—great for high-effort strategies.">
+          <label for="up_miner">⛏️ Miner Upgrade<br><small>Boost mining efficiency</small></label>
+        </div>
+        <div class="upgrade-card">
+          <input type="checkbox" id="up_defense" title="Protects against raids—essential if you're a target!">
+          <label for="up_defense">🛡️ Defense Upgrade<br><small>Protect against raids</small></label>
+        </div>
+      </div>
+    </div>
+    
+    <button id="submitBtn" onclick="submitDecisions()">🚀 SUBMIT DECISIONS 🚀</button>
+    <p id="error"></p>
+    
+    <a href="dashboard.html" class="back-btn">← Back to Command Center</a>
+  </div>
+</body>
+</html>

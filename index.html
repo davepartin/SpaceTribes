@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Space Tribes – Login</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>🚀 SPACE TRIBES 🚀</h1>
+    <h2>Login</h2>
+    <label>Player Name: <input type="text" id="player-name" /></label>
+    <label>Tribe Name: <input type="text" id="tribe-name" /></label>
+    <button class="glow-button" onclick="login()">Login</button>
+  </main>
+  <script>
+    async function login() {
+      const playerName = document.getElementById('player-name').value.trim();
+      const tribeName = document.getElementById('tribe-name').value.trim();
+      if (!playerName || !tribeName) {
+        alert('Please enter both player and tribe names.');
+        return;
+      }
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: playerName, tribeName })
+        });
+        const result = await response.json();
+        if (result.success) {
+          localStorage.setItem('playerName', playerName);
+          window.location.href = '/dashboard.html';
+        } else {
+          alert(result.error);
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        alert('Failed to login.');
+      }
+    }
+  </script>
+</body>
+</html>
