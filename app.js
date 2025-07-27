@@ -4,7 +4,7 @@ const path = require('path');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname))); // <-- this is correct
+app.use(express.static(path.join(__dirname))); // Serves all static files
 
 
 /*
@@ -284,12 +284,6 @@ app.post('/api/reset-game', (req, res) => {
     events_log: []
   };
   res.json({ success: true });
-});
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-app.get('/index.html', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
 });
 // Cron job: process the day at midnight (UTC) every day
 cron.schedule('0 0 * * *', async () => {
