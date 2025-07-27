@@ -4,7 +4,7 @@ const path = require('path');
 
 const app = express();
 app.use(express.json());
-app.use(express.static(path.join(__dirname))); // <-- update here
+app.use(express.static(path.join(__dirname))); // <-- this is correct
 
 
 /*
@@ -19,10 +19,6 @@ app.use(express.static(path.join(__dirname))); // <-- update here
  * lost whenever the process restarts. This implementation is intended
  * primarily for development and testing.
  */
-
-const app = express();
-app.use(express.json());
-app.use(express.static(__dirname));
 
 // Define the minerals used in the game
 const MINERALS = ['bluegems', 'redrubies', 'whitediamonds', 'greenpoison'];
