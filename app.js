@@ -1,5 +1,7 @@
 const express = require('express');
 const cron = require('node-cron');
+const path = require('path'); 
+
 
 /*
  * Simplified Space Tribes server
@@ -283,7 +285,12 @@ app.post('/api/reset-game', (req, res) => {
   };
   res.json({ success: true });
 });
-
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+app.get('/index.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 // Cron job: process the day at midnight (UTC) every day
 cron.schedule('0 0 * * *', async () => {
   console.log('Cron job triggered');
