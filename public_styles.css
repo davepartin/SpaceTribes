@@ -1,0 +1,42 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #000 url('space-bg.jpg') no-repeat center center fixed; /* Add a space image if you want */
+  background-size: cover;
+  color: #fff;
+  margin: 0;
+  padding: 20px;
+}
+
+.container {
+  max-width: 600px;
+  margin: auto;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 20px;
+  border-radius: 10px;
+}
+
+input, button {
+  display: block;
+  width: 100%;
+  margin: 10px 0;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+button {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+ul, ol {
+  list-style: none;
+  padding: 0;
+}
+
+@media (max-width: 600px) {
+  .container {
+    padding: 10px;
+  }
+}

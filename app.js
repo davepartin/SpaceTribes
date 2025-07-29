@@ -1,298 +1,164 @@
 const express = require('express');
-const cron = require('node-cron');
+const sqlite3 = require('sqlite3').verbose();
+const bodyParser = require('body-parser');
 const path = require('path');
 
 const app = express();
-app.use(express.json());
-app.use(express.static(path.join(__dirname))); // Serves all static files
+const db = new sqlite3.Database('spacetribes.db');
 
+app.use(bodyParser.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
-/*
- * Simplified Space Tribes server
- *
- * This version of the server removes the dependency on SQLite and stores all
- * game state in memory. It exposes the same API endpoints expected by the
- * existing HTML/JS front‑end. Use this file instead of the original
- * database‑backed version.
- *
- * Note: Because this server keeps everything in memory, all data will be
- * lost whenever the process restarts. This implementation is intended
- * primarily for development and testing.
- */
+// Initialize DB
+db.serialize(() => {
+  db.run(`CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY, name TEXT UNIQUE)`);
+  db.run(`CREATE TABLE IF NOT EXISTS game_state (id INTEGER PRIMARY KEY, current_day INTEGER, prices TEXT)`);
+  db.run(`CREATE TABLE IF NOT EXISTS player_resources (player_id INTEGER, stockpiles TEXT, credits INTEGER)`);
+  db.run(`CREATE TABLE IF NOT EXISTS player_decisions (player_id INTEGER, day INTEGER, efforts TEXT, sales TEXT)`);
 
-// Define the minerals used in the game
-const MINERALS = ['bluegems', 'redrubies', 'whitediamonds', 'greenpoison'];
+  // Init game state if not exists
+  db.get('SELECT * FROM game_state WHERE id = 1', (err, row) => {
+    if (!row) {
+      const initialPrices = JSON.stringify({ crystium: 10, adamantite: 15, xerium: 20, nourite: 12 });
+      db.run('INSERT INTO game_state (id, current_day, prices) VALUES (1, 1, ?)', [initialPrices]);
+    }
+  });
+});
 
-// In‑memory storage for players and game state
-let players = [];
-let decisionsByPlayer = {}; // maps player name -> decisions for the current day
-let gameState = {
-  current_day: 1,
-  prices: { bluegems: 10, redrubies: 10, whitediamonds: 10, greenpoison: 10 },
-  last_prices: { bluegems: 10, redrubies: 10, whitediamonds: 10, greenpoison: 10 },
-  events_log: []
-};
+// Serve index.html at root
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
-/**
- * Ensure there are always six total players in the game. Human players occupy
- * the first slots and the remainder are filled by AI bots. Bots make simple
- * decisions each day during processing.
- */
-function addBotPlayers() {
-  const needed = 6 - players.length;
-  for (let i = 0; i < needed; i++) {
-    const botIndex = players.filter(p => p.is_ai).length + 1;
-    const name = `Bot${botIndex}`;
-    const tribe = `Bot Tribe ${botIndex}`;
-    if (!players.find(p => p.name === name)) {
-      players.push({
-        id: players.length + 1,
-        name,
-        tribe_name: tribe,
-        is_ai: true,
-        resources: { bluegems: 0, redrubies: 0, whitediamonds: 0, greenpoison: 0 },
-        credits: 1000,
-        upgrades: { miner: 0, defense: 0 }
+// Login/Register
+app.post('/login', (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Name required' });
+
+  db.get('SELECT * FROM players WHERE name = ?', [name.toLowerCase()], (err, row) => {
+    if (row) {
+      return res.json({ playerId: row.id, name: row.name });
+    }
+    // Register new if <6 players
+    db.all('SELECT COUNT(*) as count FROM players', (err, rows) => {
+      if (rows[0].count >= 6) return res.status(400).json({ error: 'Max 6 players' });
+      db.run('INSERT INTO players (name) VALUES (?)', [name.toLowerCase()], function(err) {
+        if (err) return res.status(500).json({ error: 'Error registering' });
+        const playerId = this.lastID;
+        const initialStock = JSON.stringify({ crystium: 0, adamantite: 0, xerium: 0, nourite: 0 });
+        db.run('INSERT INTO player_resources (player_id, stockpiles, credits) VALUES (?, ?, 0)', [playerId, initialStock]);
+        res.json({ playerId, name });
       });
-    }
-  }
-}
-
-/**
- * POST /api/login
- * Logs in an existing human player or creates a new one if room allows.
- */
-app.post('/api/login', (req, res) => {
-  const { name, tribeName } = req.body;
-  if (!name || !tribeName) {
-    return res.status(400).json({ error: 'Invalid parameters' });
-  }
-  const existing = players.find(p => !p.is_ai && p.name.toLowerCase() === name.toLowerCase());
-  if (existing) {
-    return res.json({ success: true });
-  }
-  const humanCount = players.filter(p => !p.is_ai).length;
-  if (humanCount >= 6) {
-    return res.status(400).json({ error: 'Maximum 6 players allowed' });
-  }
-  players.push({
-    id: players.length + 1,
-    name,
-    tribe_name: tribeName,
-    is_ai: false,
-    resources: { bluegems: 0, redrubies: 0, whitediamonds: 0, greenpoison: 0 },
-    credits: 1000,
-    upgrades: { miner: 0, defense: 0 }
-  });
-  addBotPlayers();
-  return res.json({ success: true });
-});
-
-/**
- * GET /api/players
- * Returns the names and tribe names of all human players.
- */
-app.get('/api/players', (req, res) => {
-  const humans = players.filter(p => !p.is_ai).map(p => ({ name: p.name, tribe_name: p.tribe_name }));
-  return res.json(humans);
-});
-
-/**
- * GET /api/game-state/:playerName
- * Returns the current day, prices, last prices, resources and credits for the
- * specified player, leaderboard and event log.
- */
-app.get('/api/game-state/:playerName', (req, res) => {
-  const playerName = req.params.playerName;
-  const player = players.find(p => p.name === playerName);
-  if (!player) {
-    return res.status(400).json({ error: 'Player not found' });
-  }
-  const resources = { ...player.resources };
-  resources.credits = player.credits;
-  const leaderboard = players
-    .map(p => ({ tribe_name: p.tribe_name, credits: p.credits }))
-    .sort((a, b) => b.credits - a.credits);
-  return res.json({
-    currentDay: gameState.current_day,
-    prices: { ...gameState.prices },
-    lastPrices: { ...gameState.last_prices },
-    resources,
-    leaderboard,
-    eventLog: [...gameState.events_log]
+    });
   });
 });
 
-/**
- * GET /api/decisions/:playerName
- * Returns the decisions that the specified player has already submitted for
- * the current day.
- */
-app.get('/api/decisions/:playerName', (req, res) => {
-  const playerName = req.params.playerName;
-  if (!players.find(p => p.name === playerName)) {
-    return res.status(400).json({ error: 'Player not found' });
-  }
-  const decisions = decisionsByPlayer[playerName] || {};
-  return res.json(decisions);
-});
+// Get Game Data for Dashboard
+app.get('/game-data/:playerId', (req, res) => {
+  const playerId = req.params.playerId;
+  db.get('SELECT * FROM game_state WHERE id = 1', (err, game) => {
+    if (err || !game) return res.status(500).json({ error: 'Game state error' });
+    const prices = JSON.parse(game.prices);
 
-/**
- * POST /api/submit-decisions
- * Saves a player's decisions for the current day. Validates that the total
- * mining effort does not exceed 10 points.
- */
-app.post('/api/submit-decisions', (req, res) => {
-  const { playerName, decisions } = req.body;
-  if (!playerName || !decisions) {
-    return res.status(400).json({ error: 'Invalid submission' });
-  }
-  const player = players.find(p => p.name === playerName);
-  if (!player) {
-    return res.status(400).json({ error: 'Player not found' });
-  }
-  const totalEffort = MINERALS.reduce((sum, m) => sum + (decisions.mining?.[m] || 0), 0);
-  if (totalEffort > 10) {
-    return res.status(400).json({ error: 'Total effort exceeds 10 points' });
-  }
-  decisionsByPlayer[playerName] = decisions;
-  return res.json({ success: true });
-});
+    db.get('SELECT * FROM player_resources WHERE player_id = ?', [playerId], (err, resources) => {
+      const stockpiles = JSON.parse(resources.stockpiles);
 
-/**
- * Core game logic that processes the end of the current day and advances to
- * the next. This function updates resources, credits, prices and logs events.
- */
-async function processDay() {
-  console.log('Processing day', gameState.current_day);
-  const yesterdayPrices = { ...gameState.prices };
-  gameState.last_prices = { ...yesterdayPrices };
-  const totalSold = { bluegems: 0, redrubies: 0, whitediamonds: 0, greenpoison: 0 };
-  players.forEach(p => {
-    let dec = decisionsByPlayer[p.name];
-    if (!dec) {
-      dec = {
-        mining: { bluegems: 2, redrubies: 2, whitediamonds: 2, greenpoison: 2 },
-        sell: { bluegems: 0, redrubies: 0, whitediamonds: 0, greenpoison: 0 },
-        raidTarget: '',
-        raidMineral: 'bluegems',
-        upgrade: ''
-      };
-      if (p.is_ai) {
-        dec.sell = {};
-        MINERALS.forEach(m => {
-          dec.sell[m] = Math.floor((p.resources[m] || 0) * 0.5);
+      // Leaderboard: all players' credits
+      db.all('SELECT p.name, r.credits FROM players p JOIN player_resources r ON p.id = r.player_id ORDER BY r.credits DESC', (err, leaderboard) => {
+
+        // Current decisions if any
+        db.get('SELECT * FROM player_decisions WHERE player_id = ? AND day = ?', [playerId, game.current_day], (err, decisions) => {
+          const efforts = decisions ? JSON.parse(decisions.efforts) : { crystium: 0, adamantite: 0, xerium: 0, nourite: 0 };
+          const sales = decisions ? JSON.parse(decisions.sales) : { crystium: 0, adamantite: 0, xerium: 0, nourite: 0 };
+          res.json({ currentDay: game.current_day, prices, stockpiles, credits: resources.credits, leaderboard, efforts, sales });
         });
-        if (Math.random() < 0.2 && players.length > 1) {
-          const targets = players.filter(x => x.name !== p.name);
-          const target = targets[Math.floor(Math.random() * targets.length)];
-          dec.raidTarget = target.name;
-          dec.raidMineral = MINERALS[Math.floor(Math.random() * MINERALS.length)];
-        }
-        if (Math.random() < 0.3) {
-          dec.upgrade = Math.random() < 0.5 ? 'miner' : 'defense';
-        }
-      }
-    }
-    // Mining
-    MINERALS.forEach(m => {
-      const effort = dec.mining[m] || 0;
-      const baseYield = 2 + p.upgrades.miner;
-      p.resources[m] += baseYield * effort;
+      });
     });
-    // Selling
-    MINERALS.forEach(m => {
-      const amount = Math.min(p.resources[m], dec.sell[m] || 0);
-      p.resources[m] -= amount;
-      p.credits += amount * gameState.prices[m];
-      totalSold[m] += amount;
+  });
+});
+
+// Submit Decisions
+app.post('/submit-decisions', (req, res) => {
+  const { playerId, efforts, sales } = req.body;
+  db.get('SELECT current_day FROM game_state WHERE id = 1', (err, game) => {
+    const day = game.current_day;
+    const effortsJson = JSON.stringify(efforts);
+    const salesJson = JSON.stringify(sales);
+
+    // Check total efforts <=10
+    const totalEffort = Object.values(efforts).reduce((a, b) => a + b, 0);
+    if (totalEffort > 10) return res.status(400).json({ error: 'Effort exceeds 10' });
+
+    // Check sales <= stockpiles
+    db.get('SELECT stockpiles FROM player_resources WHERE player_id = ?', [playerId], (err, row) => {
+      const stockpiles = JSON.parse(row.stockpiles);
+      for (let min in sales) {
+        if (sales[min] > stockpiles[min]) return res.status(400).json({ error: `Can't sell more ${min} than you have` });
+      }
+
+      // Upsert decision
+      db.run('REPLACE INTO player_decisions (player_id, day, efforts, sales) VALUES (?, ?, ?, ?)', [playerId, day, effortsJson, salesJson], (err) => {
+        if (err) return res.status(500).json({ error: 'Submit error' });
+        res.json({ success: true });
+      });
     });
-    // Raiding
-    if (dec.raidTarget) {
-      const target = players.find(x => x.name === dec.raidTarget);
-      if (target) {
-        const stolen = Math.min((target.resources[dec.raidMineral] || 0) * 0.1, 5);
-        if (stolen > 0) {
-          target.resources[dec.raidMineral] -= stolen;
-          p.resources[dec.raidMineral] += stolen;
-          gameState.events_log.push(
-            `${p.name} raided ${target.name} for ${stolen.toFixed(1)} ${dec.raidMineral}`
-          );
+  });
+});
+
+// Process Day (manual trigger)
+app.post('/process-day', (req, res) => {
+  db.get('SELECT * FROM game_state WHERE id = 1', (err, game) => {
+    const day = game.current_day;
+    const prices = JSON.parse(game.prices);
+
+    // Get all decisions (if no decision, assume 0)
+    db.all('SELECT p.id, d.efforts, d.sales FROM players p LEFT JOIN player_decisions d ON p.id = d.player_id AND d.day = ?', [day], (err, rows) => {
+      let totalSupply = { crystium: 0, adamantite: 0, xerium: 0, nourite: 0 };
+
+      // Process each player
+      rows.forEach(row => {
+        const efforts = row.efforts ? JSON.parse(row.efforts) : { crystium: 0, adamantite: 0, xerium: 0, nourite: 0 };
+        const sales = row.sales ? JSON.parse(row.sales) : { crystium: 0, adamantite: 0, xerium: 0, nourite: 0 };
+
+        // Mine: yield = effort * 1 (simple)
+        let mined = {};
+        for (let min in efforts) {
+          mined[min] = efforts[min];
+          totalSupply[min] += mined[min];
         }
+
+        db.get('SELECT * FROM player_resources WHERE player_id = ?', [row.id], (err, resRow) => {
+          let stockpiles = JSON.parse(resRow.stockpiles);
+          let credits = resRow.credits;
+
+          // Add mined
+          for (let min in mined) stockpiles[min] += mined[min];
+
+          // Sell
+          for (let min in sales) {
+            if (sales[min] <= stockpiles[min]) {
+              stockpiles[min] -= sales[min];
+              credits += sales[min] * prices[min];
+            }
+          }
+
+          // Update resources
+          db.run('UPDATE player_resources SET stockpiles = ?, credits = ? WHERE player_id = ?', [JSON.stringify(stockpiles), credits, row.id]);
+        });
+      });
+
+      // Update prices: simple supply/demand - price -= (supply / 6) if supply > demand threshold (assume demand=10 per mineral)
+      let newPrices = {};
+      for (let min in prices) {
+        const supply = totalSupply[min];
+        newPrices[min] = Math.max(5, prices[min] - Math.floor(supply / 6)); // Basic formula, min 5
       }
-    }
-    // Upgrades
-    if (dec.upgrade === 'miner') {
-      const cost = 100 + p.upgrades.miner * 50;
-      if (p.credits >= cost) {
-        p.credits -= cost;
-        p.upgrades.miner += 1;
-        gameState.events_log.push(`${p.name} upgraded their mining robots`);
-      }
-    }
-    if (dec.upgrade === 'defense') {
-      const cost = 80 + p.upgrades.defense * 40;
-      if (p.credits >= cost) {
-        p.credits -= cost;
-        p.upgrades.defense += 1;
-        gameState.events_log.push(`${p.name} upgraded their defense systems`);
-      }
-    }
+
+      // Advance day
+      db.run('UPDATE game_state SET current_day = ?, prices = ? WHERE id = 1', [day + 1, JSON.stringify(newPrices)]);
+      res.json({ success: true });
+    });
   });
-  // Price adjustments based on supply/demand
-  MINERALS.forEach(m => {
-    const sold = totalSold[m];
-    const priceChange = sold > 0 ? -0.1 * sold : 0.05;
-    gameState.prices[m] = Math.max(1, gameState.prices[m] + priceChange);
-  });
-  // Random market events
-  if (Math.random() < 0.2) {
-    const mineral = MINERALS[Math.floor(Math.random() * MINERALS.length)];
-    const change = Math.random() < 0.5 ? 2 : -2;
-    gameState.prices[mineral] = Math.max(1, gameState.prices[mineral] + change);
-    gameState.events_log.push(`Market event: ${mineral} price ${change > 0 ? 'rose' : 'fell'} by ${Math.abs(change)}`);
-  }
-  // Reset decisions and increment day
-  decisionsByPlayer = {};
-  gameState.current_day += 1;
-  // Trim event log to last 10 entries
-  if (gameState.events_log.length > 10) {
-    gameState.events_log = gameState.events_log.slice(-10);
-  }
-}
-
-/**
- * POST /api/process-day
- * Endpoint to manually advance the game to the next day.
- */
-app.post('/api/process-day', async (req, res) => {
-  await processDay();
-  return res.json({ success: true });
 });
 
-/**
- * POST /api/reset-game
- * Resets all players and game state back to their initial conditions.
- */
-app.post('/api/reset-game', (req, res) => {
-  players = [];
-  decisionsByPlayer = {};
-  gameState = {
-    current_day: 1,
-    prices: { bluegems: 10, redrubies: 10, whitediamonds: 10, greenpoison: 10 },
-    last_prices: { bluegems: 10, redrubies: 10, whitediamonds: 10, greenpoison: 10 },
-    events_log: []
-  };
-  res.json({ success: true });
-});
-// Cron job: process the day at midnight (UTC) every day
-cron.schedule('0 0 * * *', async () => {
-  console.log('Cron job triggered');
-  await processDay();
-});
-
-// Start the server on port 3000
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Space Tribes server listening on port ${PORT}`);
-});
+app.listen(3000, () => console.log('Server on port 3000'));
