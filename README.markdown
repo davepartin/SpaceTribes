@@ -1,56 +1,54 @@
-# Space Tribes - Basic Version
+Space Tribes
+A web-based multiplayer game inspired by M.U.L.E., set in a sci-fi space theme for 1-6 players. Players manage tribes on an alien planet, making daily decisions about mining, trading, and raiding. The game runs for 28 days, with a new day processed at midnight UTC.
+Requirements
 
-This is a basic implementation of "Space Tribes," a multiplayer browser game inspired by M.U.L.E. with a sci-fi theme. It's designed for 1-6 players who colonize an alien planet, mine minerals, and sell them in a shared market with fluctuating prices based on supply and demand.
+Node.js
+SQLite3
+npm
 
-## Key Features in This Basic Version
-- Players: 1-6 (no AI bots yet; if fewer than 6 join, the game still works but with fewer participants).
-- Login: Enter a unique name on first visit; it registers you and your tribe (tribe name is same as player name for simplicity).
-- Mechanics:
-  - Each "day," allocate 10 effort points across 4 minerals (Crystium, Adamantite, Xerium, Nourite) for mining.
-  - Choose how much of your stockpiled minerals to sell at current prices.
-  - Shared market: Prices adjust based on total supply mined (high supply lowers prices).
-- UI: Mobile-friendly. Login page, then a single dashboard screen showing current prices, your resources, leaderboard, and forms to submit mining/selling decisions.
-- Day Processing: Manual for now—no auto-midnight cron. Any player can trigger "Process Day" via a button on the dashboard (simulates midnight: aggregates decisions, updates prices/resources/credits, advances day). In a real game, coordinate via text to submit before processing.
-- Winning: After 28 days, highest Galactic Credits wins (but game doesn't auto-end; just check leaderboard).
-- No raids, upgrades, events, or bots yet—focus on core mining/selling loop.
-- Social: Decisions private until process; bluff/negotiate via external texts.
+Setup Instructions
 
-## Tech Stack
-- Backend: Node.js with Express.js.
-- Database: SQLite (file-based, `spacetribes.db`).
-- Frontend: Vanilla HTML/CSS/JS (mobile-responsive).
-- No frameworks; lightweight.
+Clone the repository to your local machine.
+Navigate to the spacetribes folder:cd spacetribes
 
-## Setup Instructions
-1. Clone this repo into a folder like `spacetribes` on your GitHub (e.g., add to ministrybag.com repo).
-2. Install dependencies:
-   ```
-   npm init -y
-   npm install express sqlite3 body-parser
-   ```
-3. Run the server:
-   ```
-   node app.js
-   ```
-   - Server runs on http://localhost:3000.
-4. Access in browser (phone-friendly).
-5. Hosting: For free deployment (since needs backend):
-   - Use Render.com, Heroku, or Vercel (serverless Node support).
-   - Push to GitHub, connect to Render (new web service, Node, `node app.js` as start command).
-   - SQLite works on Render (persistent disk).
-6. Reset Game: Delete `spacetribes.db` and restart server to start over.
-7. Edge Cases: If not all submit, unsubmitted players get 0 mining/selling (lose turn). Game continues indefinitely past 28 days.
 
-## Database Schema
-- `players`: id (INTEGER PRIMARY KEY), name (TEXT UNIQUE).
-- `game_state`: id (INTEGER PRIMARY KEY), current_day (INTEGER), prices (TEXT as JSON: {crystium:10, adamantite:15, ...}).
-- `player_resources`: player_id (INTEGER), stockpiles (TEXT as JSON: {crystium:0, ...}), credits (INTEGER).
-- `player_decisions`: player_id (INTEGER), day (INTEGER), efforts (TEXT as JSON: {crystium:3, ...}), sales (TEXT as JSON: {crystium:2, ...}).
+Install dependencies:npm install express sqlite3 body-parser node-cron
 
-## Future Additions
-- Add raids/upgrades/events.
-- AI bots for empty slots (basic random decisions).
-- Auto-processing with node-cron.
-- Better security (sessions), random events.
 
-Enjoy building on this base! It's balanced for strategy: Overmine crashes prices, underm ine misses opportunities—bluff to coordinate.
+Run the server:node app.js
+
+
+Open http://localhost:3000 in your browser to play.
+
+Hosting
+To host online (e.g., for ministrybag.com/spacetribes):
+
+Use a service like Render.com, Heroku, or Vercel.
+Push the repository to GitHub under your account (e.g., ministrybag.com/spacetribes).
+Configure the hosting service to run node app.js and serve static files from the root directory.
+Ensure the SQLite database (spacetribes.db) is writable by the server.
+
+File Structure
+
+app.js: Backend server with Express and SQLite.
+client.js: Frontend JavaScript for dynamic content.
+index.html: Login page.
+dashboard.html: Main game dashboard.
+decisions.html: Daily decisions page.
+styles.css: CSS styling.
+spacetribes.db: SQLite database (auto-created on first run).
+
+Game Features
+
+1-6 players, each choosing a unique tribe name on first login.
+Daily decisions: Allocate 10 effort points to mine White Diamonds, Red Rubies, Blue Gems, or Green Poison; sell resources; raid others (costs 2 Green Poison, 66% success to steal 4 resources).
+Midnight UTC processing: Mining, Raids, then Trades, with dynamic price adjustments based on supply/demand.
+Dashboard shows stockpile, last mining, prices, needs, players' stockpiles, news board (raid results), and leaderboard.
+Mobile-friendly interface with a space-themed design.
+
+Notes
+
+No authentication tokens; security assumes trusted players.
+Game resets after 28 days (manual reset required).
+Non-human players (if <6 players) use default actions (1 Diamond, 1 Ruby, 1 Gem, 2 Poison).
+Use the "Process Day" button for testing to advance days manually.

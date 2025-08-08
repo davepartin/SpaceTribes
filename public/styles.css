@@ -1,8 +1,8 @@
 body {
-  font-family: Arial, sans-serif;
-  background: #000 url('space-bg.jpg') no-repeat center center fixed; /* Add a space image if you want */
+  font-family: 'Orbitron', 'Space Mono', sans-serif;
+  background: #1a1a2e url('space-bg.jpg') no-repeat center center fixed;
   background-size: cover;
-  color: #fff;
+  color: #ffffff;
   margin: 0;
   padding: 20px;
 }
@@ -10,33 +10,106 @@ body {
 .container {
   max-width: 600px;
   margin: auto;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(26, 26, 46, 0.9);
   padding: 20px;
   border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
-input, button {
-  display: block;
-  width: 100%;
+h1 {
+  text-align: center;
+  font-size: 2em;
+  color: #00d4ff;
+}
+
+h2 {
+  color: #00ffcc;
+  border-bottom: 2px solid #00ffcc;
+  padding-bottom: 5px;
+}
+
+.decision-section {
+  margin-bottom: 20px;
+}
+
+.material-row {
+  display: flex;
+  align-items: center;
   margin: 10px 0;
-  padding: 10px;
-  box-sizing: border-box;
+}
+
+.material-icon {
+  font-size: 1.5em;
+  margin-right: 10px;
+}
+
+.material-row span {
+  flex: 1;
+}
+
+.material-row input[type="number"] {
+  width: 60px;
+  padding: 5px;
+  margin-left: 10px;
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #555;
+}
+
+#raidOperations select, #raidOperations input[type="number"] {
+  width: 100%;
+  padding: 5px;
+  margin: 5px 0;
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #555;
 }
 
 button {
-  background: #4CAF50;
+  display: block;
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  background-color: #00d4ff;
   color: white;
   border: none;
   cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
 }
 
-ul, ol {
-  list-style: none;
-  padding: 0;
+button#upgradeMiner { background-color: #00ffcc; }
+button#upgradeDefense { background-color: #ff00ff; }
+
+#message {
+  color: #ff4444;
+  text-align: center;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 20px;
+}
+
+table, th, td {
+  border: 1px solid #555;
+}
+
+th, td {
+  padding: 10px;
+  text-align: left;
 }
 
 @media (max-width: 600px) {
   .container {
     padding: 10px;
+  }
+  .material-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .material-row input[type="number"] {
+    margin-left: 0;
+    margin-top: 5px;
   }
 }

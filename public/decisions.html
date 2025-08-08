@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Tribes Decisions</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&family=Space+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 SPACE TRIBE MULE 🚀</h1>
+    <h2>Player: <span id="playerName"></span> | Coins: <span id="credits">0</span> | Action Points Remaining: <span id="effortPoints">10</span></h2>
+
+    <div class="decision-section">
+      <h2>🤖 Deploy Mining Robots (Total: 10 Robots)</h2>
+      <p>Send out up to 10 Mining Robots across resources to mine them. 1 Robot gains 1 resource. Remember, too many from players lowers prices.</p>
+      <div class="material-row">
+        <span class="material-icon">💎</span>
+        <span>White Diamonds (~<span id="priceWhiteDiamonds">20</span> Coins)</span>
+        <input type="number" name="whiteDiamonds" min="0" max="10">
+      </div>
+      <div class="material-row">
+        <span class="material-icon">🔻</span>
+        <span>Red Rubies (~<span id="priceRedRubies">15</span> Coins)</span>
+        <input type="number" name="redRubies" min="0" max="10">
+      </div>
+      <div class="material-row">
+        <span class="material-icon">🔷</span>
+        <span>Blue Gems (~<span id="priceBlueGems">12</span> Coins)</span>
+        <input type="number" name="blueGems" min="0" max="10">
+      </div>
+      <div class="material-row">
+        <span class="material-icon">🌱</span>
+        <span>Green Poison (~<span id="priceGreenPoison">10</span> Coins)</span>
+        <input type="number" name="greenPoison" min="0" max="10">
+      </div>
+      <p>Prices adjust daily based on colony needs</p>
+    </div>
+
+    <div class="decision-section">
+      <h2>💰 Market Trading</h2>
+      <p>Sell your resources at current market prices. Choose wisely - prices fluctuate based on supply and demand!</p>
+      <div class="material-row">
+        <span class="material-icon">💎</span>
+        <span>White Diamonds</span>
+        <span>Quantity Owned: <span id="resourceWhiteDiamonds">0</span></span>
+        <input type="number" name="sellWhiteDiamonds" min="0">
+      </div>
+      <div class="material-row">
+        <span class="material-icon">🔻</span>
+        <span>Red Rubies</span>
+        <span>Quantity Owned: <span id="resourceRedRubies">0</span></span>
+        <input type="number" name="sellRedRubies" min="0">
+      </div>
+      <div class="material-row">
+        <span class="material-icon">🔷</span>
+        <span>Blue Gems</span>
+        <span>Quantity Owned: <span id="resourceBlueGems">0</span></span>
+        <input type="number" name="sellBlueGems" min="0">
+      </div>
+      <div class="material-row">
+        <span class="material-icon">🌱</span>
+        <span>Green Poison</span>
+        <span>Quantity Owned: <span id="resourceGreenPoison">0</span></span>
+        <input type="number" name="sellGreenPoison" min="0">
+      </div>
+    </div>
+
+    <div class="decision-section" id="raidOperations">
+      <h2>⚔️ Raid Operations</h2>
+      <p>Cost: 2 Green Poison. Success chance: 66% to steal 4 resources.</p>
+      <label>Choose who to attack:</label>
+      <select id="raidTarget">
+        <option value="none">None</option>
+      </select>
+      <label>Choose Target Resource:</label>
+      <div>
+        <input type="radio" name="raidMaterial" value="whiteDiamonds"> 💎 White Diamonds
+        <input type="radio" name="raidMaterial" value="redRubies"> 🔻 Red Rubies
+        <input type="radio" name="raidMaterial" value="blueGems"> 🔷 Blue Gems
+        <input type="radio" name="raidMaterial" value="greenPoison"> 🌱 Green Poison
+      </div>
+    </div>
+
+    <button onclick="submitDecisions()">🚀 SUBMIT DECISIONS 🚀</button>
+    <button onclick="goBack()">← Back to Command Center</button>
+    <p id="message"></p>
+  </div>
+  <script src="client.js"></script>
+</body>
+</html>
