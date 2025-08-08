@@ -1,27 +1,14 @@
 {
-  "name": "spacetribes",
+  "name": "space-tribes",
   "version": "1.0.0",
-  "description": "This is a basic implementation of \"Space Tribes,\" a multiplayer browser game inspired by M.U.L.E. with a sci-fi theme. It's designed for 1-6 players who colonize an alien planet, mine minerals, and sell them in a shared market with fluctuating prices based on supply and demand.",
+  "description": "Space mining strategy game",
   "main": "app.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/davepartin/SpaceTribes.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/davepartin/SpaceTribes/issues"
-  },
-  "homepage": "https://github.com/davepartin/SpaceTribes#readme",
   "dependencies": {
-    "body-parser": "^2.2.0",
-    "express": "^5.1.0",
-    "node-cron": "^4.2.1",
-    "sqlite3": "^5.1.7"
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "body-parser": "^1.20.2"
+  },
+  "scripts": {
+    "start": "node app.js"
   }
 }

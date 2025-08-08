@@ -2,325 +2,775 @@ const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
 const path = require('path');
-const cron = require('node-cron');
 
 const app = express();
-const db = new sqlite3.Database('spacetribes.db');
+const db = new sqlite3.Database('./spacetribes.db');
 
-// Middleware
 app.use(bodyParser.json());
-app.use(express.static(__dirname));
+app.use(express.static('.'));
 
-// Initialize DB with consistent resource names
+// Helper to get resource icon
+function getResourceIcon(resource) {
+  switch(resource) {
+    case 'whiteDiamonds': return '💎';
+    case 'redRubies': return '🔻';
+    case 'blueGems': return '🔷';
+    case 'greenPoison': return '🌱';
+    default: return '';
+  }
+}
+
+// Initialize database tables
 db.serialize(() => {
-  db.run(`CREATE TABLE IF NOT EXISTS players (id INTEGER PRIMARY KEY, name TEXT UNIQUE)`);
-  db.run(`CREATE TABLE IF NOT EXISTS game_state (id INTEGER PRIMARY KEY, current_day INTEGER, prices TEXT, needs TEXT)`);
-  db.run(`CREATE TABLE IF NOT EXISTS player_resources (player_id INTEGER, stockpiles TEXT, credits INTEGER, lastRaidDay INTEGER DEFAULT 0)`);
-  db.run(`CREATE TABLE IF NOT EXISTS player_decisions (player_id INTEGER, day INTEGER, efforts TEXT, sales TEXT, raidTarget TEXT, raidMaterial TEXT, raidAmount INTEGER)`);
+  // Run the schema creation only if tables don't exist
+  db.run(`
+    CREATE TABLE IF NOT EXISTS players (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      race TEXT NOT NULL,
+      pin TEXT NOT NULL,
+      credits INTEGER DEFAULT 100,
+      stockpiles TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      protected_resources TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      lastEfforts TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 
-  db.get('SELECT * FROM game_state WHERE id = 1', (err, row) => {
-    if (!row) {
-      const initialPrices = JSON.stringify({ whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 });
-      const initialNeeds = JSON.stringify({ whiteDiamonds: 20, redRubies: 20, blueGems: 20, greenPoison: 20 });
-      db.run('INSERT INTO game_state (id, current_day, prices, needs) VALUES (1, 1, ?, ?)', [initialPrices, initialNeeds]);
-    } else {
-      const prices = JSON.parse(row.prices);
-      if (!prices.whiteDiamonds) {
-        prices.whiteDiamonds = 20;
-        prices.redRubies = 15;
-        prices.blueGems = 12;
-        prices.greenPoison = 10;
-        delete prices.crystium;
-        delete prices.adamantite;
-        delete prices.xerium;
-        delete prices.nourite;
-        db.run('UPDATE game_state SET prices = ? WHERE id = 1', [JSON.stringify(prices)]);
-      }
-      let needs = JSON.parse(row.needs || '{}');
-      if (!needs.whiteDiamonds) {
-        needs.whiteDiamonds = 20;
-        needs.redRubies = 20;
-        needs.blueGems = 20;
-        needs.greenPoison = 20;
-        db.run('UPDATE game_state SET needs = ? WHERE id = 1', [JSON.stringify(needs)]);
-      }
+  db.run(`
+    CREATE TABLE IF NOT EXISTS decisions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playerId INTEGER,
+      day INTEGER,
+      efforts TEXT,
+      sales TEXT,
+      raidTarget TEXT,
+      raidMaterial TEXT,
+      submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (playerId) REFERENCES players(id)
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS game_state (
+      id INTEGER PRIMARY KEY,
+      current_day INTEGER DEFAULT 1,
+      market_prices TEXT DEFAULT '{"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}',
+      colony_needs TEXT DEFAULT '{"whiteDiamonds":15,"redRubies":15,"blueGems":15,"greenPoison":15}',
+      last_supply TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      active_players INTEGER DEFAULT 0,
+      last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS raid_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      day INTEGER,
+      attacker_id INTEGER,
+      attacker_name TEXT,
+      target_id INTEGER,
+      target_name TEXT,
+      resource TEXT,
+      amount INTEGER,
+      success BOOLEAN,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS news (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      day INTEGER,
+      message TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS player_sales (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playerId INTEGER,
+      day INTEGER,
+      resource TEXT,
+      quantity INTEGER,
+      price_per_unit INTEGER,
+      total_earned INTEGER,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (playerId) REFERENCES players(id)
+    )
+  `);
+
+  // Initialize game state if not exists
+  db.run(`INSERT OR IGNORE INTO game_state (id, current_day) VALUES (1, 1)`);
+
+  db.run(`ALTER TABLE players ADD COLUMN protected_resources TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding protected_resources column:', err);
     }
   });
 
-  db.all('SELECT * FROM player_resources', (err, rows) => {
-    if (rows) {
-      rows.forEach(row => {
-        const stockpiles = JSON.parse(row.stockpiles);
-        if (stockpiles.crystium !== undefined) {
-          stockpiles.whiteDiamonds = stockpiles.crystium || 0;
-          stockpiles.redRubies = stockpiles.adamantite || 0;
-          stockpiles.blueGems = stockpiles.xerium || 0;
-          stockpiles.greenPoison = stockpiles.nourite || 0;
-          delete stockpiles.crystium;
-          delete stockpiles.adamantite;
-          delete stockpiles.xerium;
-          delete stockpiles.nourite;
-          db.run('UPDATE player_resources SET stockpiles = ? WHERE player_id = ?', [JSON.stringify(stockpiles), row.player_id]);
-        }
-      });
+  db.run(`UPDATE players SET protected_resources = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}' WHERE protected_resources IS NULL OR protected_resources = ''`);
+
+  db.run(`ALTER TABLE players ADD COLUMN last_night_earnings INTEGER DEFAULT 0`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding last_night_earnings column:', err);
     }
   });
 });
 
-// Serve index.html at root with error handling
-app.get('/', (req, res) => {
-  const filePath = path.join(__dirname, 'index.html');
-  console.log('Root route hit, serving:', filePath);
-  res.sendFile(filePath, (err) => {
-    if (err) {
-      console.error('Error serving index.html:', err.message);
-      res.status(err.status || 500).send('Error loading page. Check server logs.');
-    }
-  });
-});
-
-// Login/Register
+// Login endpoint - fixed to accept name instead of race
 app.post('/login', (req, res) => {
   const { name } = req.body;
-  if (!name) return res.status(400).json({ error: 'Name required' });
+  console.log('Login attempt:', { name });
+  
+  if (!name) {
+    return res.json({ error: 'Please select a commander' });
+  }
 
-  db.get('SELECT * FROM players WHERE name = ?', [name.toLowerCase()], (err, row) => {
-    if (err) return res.status(500).json({ error: 'Database error' });
-    if (row) return res.json({ playerId: row.id, name: row.name, playerName: row.name });
+  db.get('SELECT * FROM players WHERE name = ?', [name], (err, row) => {
+    if (err) {
+      console.error('Database error:', err);
+      return res.json({ error: 'Database error' });
+    }
 
-    db.all('SELECT COUNT(*) as count FROM players', (err, rows) => {
-      if (err) return res.status(500).json({ error: 'Database error' });
-      if (rows[0].count >= 6) return res.status(400).json({ error: 'Max 6 players' });
-      db.run('INSERT INTO players (name) VALUES (?)', [name.toLowerCase()], function(err) {
-        if (err) return res.status(500).json({ error: 'Error registering' });
-        const playerId = this.lastID;
-        const initialStock = JSON.stringify({ whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 });
-        db.run('INSERT INTO player_resources (player_id, stockpiles, credits, lastRaidDay) VALUES (?, ?, 0, 0)', [playerId, initialStock]);
-        res.json({ playerId, name, playerName: name });
-      });
-    });
+    if (row) {
+      // Player exists - log them in
+      res.json({ playerId: row.id, race: row.race });
+    } else {
+      // Create new player with tribe mapping
+      const tribeMap = {
+        'Dave': 'Tribe of Endor',
+        'Silas': 'Tribe of Siluria', 
+        'Chris': 'Tribe of Elantris',
+        'Brian': 'Tribe of Psychlos',
+        'Joel': 'Tribe of Leojia',
+        'Curtis': 'Tribe of Momma Say'
+      };
+      const race = tribeMap[name] || name;
+      db.run(
+        'INSERT INTO players (name, race, pin) VALUES (?, ?, ?)',
+        [name, race, '0000'],
+        function(err) {
+          if (err) {
+            console.error('Insert error:', err);
+            return res.json({ error: 'Registration failed' });
+          }
+          res.json({ playerId: this.lastID, race: race });
+        }
+      );
+    }
   });
 });
 
-// Get Game Data for Dashboard
+// Get game data with proper calculations
 app.get('/game-data/:playerId', (req, res) => {
   const playerId = req.params.playerId;
-  db.get('SELECT * FROM game_state WHERE id = 1', (err, game) => {
-    if (err || !game) return res.status(500).json({ error: 'Game state error' });
-    const prices = JSON.parse(game.prices);
-    const needs = JSON.parse(game.needs);
+  
+  // Get game state first
+  db.get('SELECT * FROM game_state WHERE id = 1', (err, gameState) => {
+    if (err || !gameState) {
+      return res.json({ error: 'Game state error' });
+    }
 
-    db.get('SELECT p.name FROM players p WHERE p.id = ?', [playerId], (err, player) => {
-      if (err || !player) return res.status(500).json({ error: 'Player error' });
-      const playerName = player.name;
+    const currentDay = gameState.current_day;
+    const prices = JSON.parse(gameState.market_prices);
+    const needs = JSON.parse(gameState.colony_needs);
 
-      db.get('SELECT * FROM player_resources WHERE player_id = ?', [playerId], (err, resources) => {
-        if (err || !resources) return res.status(500).json({ error: 'Resources error' });
-        const stockpiles = JSON.parse(resources.stockpiles);
-        const lastRaidDay = resources.lastRaidDay || 0;
+    // Get player data
+    db.get('SELECT * FROM players WHERE id = ?', [playerId], (err, player) => {
+      if (err || !player) {
+        console.error('Player query error:', err);
+        return res.json({ error: 'Player not found' });
+      }
+      console.log('Player data loaded:', player.name);
 
-        db.all('SELECT p.id, p.name, r.credits, r.lastRaidDay, r.stockpiles FROM players p JOIN player_resources r ON p.id = r.player_id ORDER BY r.credits DESC', (err, leaderboard) => {
-          if (err) return res.status(500).json({ error: 'Leaderboard error' });
+      // Get last night's sales data
+      db.all(
+        'SELECT * FROM player_sales WHERE playerId = ? AND day = ?',
+        [playerId, Math.max(1, currentDay - 1)],
+        (err, lastNightSales) => {
+          if (err) {
+            console.error('Sales query error:', err);
+            lastNightSales = [];
+          }
+          console.log('Sales data loaded:', lastNightSales.length, 'records');
 
-          db.get('SELECT * FROM player_decisions WHERE player_id = ? AND day = ?', [playerId, game.current_day - 1], (err, lastDecision) => {
-            const lastEfforts = lastDecision ? JSON.parse(lastDecision.efforts) : { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
-            const efforts = lastDecision ? JSON.parse(lastDecision.efforts) : { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
-            const sales = lastDecision ? JSON.parse(lastDecision.sales) : { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
-            const raidTarget = lastDecision ? lastDecision.raidTarget : null;
-            const raidMaterial = lastDecision ? lastDecision.raidMaterial : null;
-            const raidAmount = lastDecision ? lastDecision.raidAmount : 0;
+          // Get all players for leaderboard
+          db.all('SELECT * FROM players ORDER BY credits DESC', [], (err, allPlayers) => {
+            if (err) allPlayers = [];
 
-            const raidSummaries = {};
-            db.all('SELECT p.name as attacker, d.raidTarget, d.raidMaterial, d.raidAmount FROM player_decisions d JOIN players p ON d.player_id = p.id WHERE d.day = ?', 
-              [game.current_day - 1], (err, raids) => {
-              raids.forEach(raid => {
-                if (raid.raidTarget && raid.raidTarget !== 'none') {
-                  db.get('SELECT stockpiles FROM player_resources WHERE player_id = (SELECT id FROM players WHERE name = ?)', [raid.raidTarget], (err, targetRes) => {
-                    const targetStockpiles = JSON.parse(targetRes.stockpiles);
-                    const success = Math.random() < 0.66 && targetStockpiles[raid.raidMaterial] >= raid.raidAmount;
-                    raidSummaries[raid.attacker] = `${raid.attacker} attempted to steal ${raid.raidAmount} ${raid.raidMaterial} from ${raid.raidTarget} - ${success ? 'Success' : 'Failed'}`;
-                  });
-                }
-              });
+            // Get today's raid logs
+            db.all(
+              'SELECT * FROM raid_logs WHERE day = ?',
+              [currentDay],
+              (err, raids) => {
+                if (err) raids = [];
 
-              res.json({ 
-                currentDay: game.current_day, 
-                prices, 
-                needs, 
-                stockpiles, 
-                credits: resources.credits || 0, 
-                leaderboard: leaderboard.map(p => ({ ...p, stockpiles: JSON.parse(p.stockpiles) })), 
-                efforts, 
-                sales, 
-                playerName, 
-                lastEfforts, 
-                lastRaidDay, 
-                raidSummaries 
-              });
-            });
+                // Get recent news
+                db.all(
+                  'SELECT message FROM news ORDER BY day DESC, id DESC LIMIT 20',
+                  [],
+                  (err, newsRows) => {
+                    if (err) newsRows = [];
+                    const newsMessages = newsRows.map(row => row.message);
+
+                    // Get player's pending decision
+                    db.get(
+                      'SELECT * FROM decisions WHERE playerId = ? AND day = ?',
+                      [playerId, currentDay],
+                      (err, decision) => {
+                        // Format leaderboard
+                        const leaderboard = allPlayers.map(p => ({
+                          id: p.id,
+                          name: p.name,
+                          race: p.race,
+                          credits: p.credits,
+                          stockpiles: JSON.parse(p.stockpiles || '{}')
+                        }));
+
+                        // Calculate available robots
+                        const playerStockpiles = JSON.parse(player.stockpiles || '{}');
+                        const protectedResources = JSON.parse(player.protected_resources || '{}');
+                        const totalStockpiles = {};
+                        const allResources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
+                        allResources.forEach(resource => {
+                          totalStockpiles[resource] = (playerStockpiles[resource] || 0) + (protectedResources[resource] || 0);
+                        });
+
+                        // Count active players for this day
+                        db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, decisions) => {
+                          const activePlayers = decisions ? decisions.length : 0;
+                          const lastSupply = JSON.parse(gameState.last_supply || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}');
+                          
+                          // Prepare response
+                          const response = {
+                            currentDay,
+                            playerId: player.id,
+                            playerName: player.name,
+                            playerRace: player.race,
+                            credits: player.credits,
+                            stockpiles: playerStockpiles,
+                            protectedResources: protectedResources,
+                            totalStockpiles: totalStockpiles,
+                            lastEfforts: JSON.parse(player.lastEfforts || '{}'),
+                            prices,
+                            needs,
+                            lastSupply: lastSupply,
+                            activePlayers: activePlayers,
+                            leaderboard,
+                            news: newsMessages,
+                            efforts: decision ? JSON.parse(decision.efforts || '{}') : {},
+                            sales: decision ? JSON.parse(decision.sales || '{}') : {},
+                            raidTarget: decision ? decision.raidTarget : 'none',
+                            raidMaterial: decision ? decision.raidMaterial : null,
+                            hasSubmitted: !!decision,
+                            lastNightSales: lastNightSales || [],
+                            lastNightEarnings: player.last_night_earnings || 0
+                          };
+                          res.json(response);
+                        });
+                      }
+                    );
+                  }
+                );
+              }
+            );
           });
-        });
-      });
+        }
+      );
     });
   });
 });
 
-// Submit Decisions with raid cost and limit
+// Submit decisions
 app.post('/submit-decisions', (req, res) => {
   const { playerId, efforts, sales, raidTarget, raidMaterial } = req.body;
-  db.get('SELECT current_day FROM game_state WHERE id = 1', (err, game) => {
-    if (err || !game) return res.status(500).json({ error: 'Game state error' });
-    const day = game.current_day;
-    const effortsJson = JSON.stringify(efforts);
-    const salesJson = JSON.stringify(sales);
+  
+  // Validate effort points (max 10)
+  const totalEffort = Object.values(efforts).reduce((sum, e) => sum + (e || 0), 0);
+  if (totalEffort > 10) {
+    return res.json({ error: 'Too many effort points! Maximum is 10.' });
+  }
+  // Validate sales limits (max 15 per resource)
+  for (const [resource, amount] of Object.entries(sales)) {
+    if ((amount || 0) > 15) {
+      return res.json({ error: `Cannot sell more than 15 ${resource} per day. You tried to sell ${amount}.` });
+    }
+  }
 
-    const totalEffort = Object.values(efforts).reduce((a, b) => a + b, 0);
-    if (totalEffort > 10) return res.status(400).json({ error: 'Effort exceeds 10' });
+  // Get current day
+  db.get('SELECT current_day FROM game_state WHERE id = 1', (err, state) => {
+    if (err || !state) {
+      return res.json({ error: 'Game state error' });
+    }
 
-    db.get('SELECT stockpiles, lastRaidDay FROM player_resources WHERE player_id = ?', [playerId], (err, row) => {
-      if (err || !row) return res.status(500).json({ error: 'Resources error' });
-      const stockpiles = JSON.parse(row.stockpiles);
-      const lastRaidDay = row.lastRaidDay || 0;
-      for (let min in sales) {
-        if (sales[min] > stockpiles[min]) return res.status(400).json({ error: `Can't sell more ${min} than you have` });
-      }
+    const currentDay = state.current_day;
 
-      // Check and deduct 2 Green Poison for raid, limit to once per day
-      if (raidTarget && raidTarget !== 'none' && raidMaterial) {
-        if (lastRaidDay === day) return res.status(400).json({ error: 'Only one raid per day allowed' });
-        if (stockpiles.greenPoison < 2) return res.status(400).json({ error: 'Need 2 Green Poison to raid' });
-        stockpiles.greenPoison -= 2;
-      }
-
-      db.run('REPLACE INTO player_decisions (player_id, day, efforts, sales, raidTarget, raidMaterial, raidAmount) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-        [playerId, day, effortsJson, salesJson, raidTarget, raidMaterial, 4], (err) => {
-        if (err) return res.status(500).json({ error: 'Submit error' });
-        if (raidTarget && raidTarget !== 'none' && raidMaterial) {
-          db.run('UPDATE player_resources SET stockpiles = ?, lastRaidDay = ? WHERE player_id = ?', [JSON.stringify(stockpiles), day, playerId]);
+    // Check if already submitted
+    db.get(
+      'SELECT id FROM decisions WHERE playerId = ? AND day = ?',
+      [playerId, currentDay],
+      (err, existing) => {
+        if (existing) {
+          // Update existing decision
+          db.run(
+            `UPDATE decisions 
+             SET efforts = ?, sales = ?, raidTarget = ?, raidMaterial = ?
+             WHERE playerId = ? AND day = ?`,
+            [
+              JSON.stringify(efforts),
+              JSON.stringify(sales),
+              raidTarget || 'none',
+              raidMaterial || null,
+              playerId,
+              currentDay
+            ],
+            (err) => {
+              if (err) {
+                return res.json({ error: 'Failed to update decision' });
+              }
+              res.json({ success: true, message: 'Decision updated!' });
+            }
+          );
+        } else {
+          // Insert new decision
+          db.run(
+            `INSERT INTO decisions (playerId, day, efforts, sales, raidTarget, raidMaterial)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+            [
+              playerId,
+              currentDay,
+              JSON.stringify(efforts),
+              JSON.stringify(sales),
+              raidTarget || 'none',
+              raidMaterial || null
+            ],
+            (err) => {
+              if (err) {
+                return res.json({ error: 'Failed to save decision' });
+              }
+              res.json({ success: true, message: 'Decision saved!' });
+            }
+          );
         }
-        res.json({ success: true });
-      });
-    });
+      }
+    );
   });
 });
 
-// Process Day with Mining, Raids, then Trades
+// Process day - complete game logic
 app.post('/process-day', (req, res) => {
-  db.get('SELECT * FROM game_state WHERE id = 1', (err, game) => {
-    if (err || !game) return res.status(500).json({ error: 'Game state error' });
-    let day = game.current_day;
-    let prices = JSON.parse(game.prices);
-    let needs = JSON.parse(game.needs);
+  const { playerId } = req.body;
+  console.log('🚀 Processing day for player:', playerId);
 
-    db.all('SELECT p.id, d.efforts, d.sales, d.raidTarget, d.raidMaterial, d.raidAmount FROM players p LEFT JOIN player_decisions d ON p.id = d.player_id AND d.day = ?', [day], (err, rows) => {
-      if (err) return res.status(500).json({ error: 'Database error' });
-      let totalSupply = { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
+  db.get('SELECT * FROM game_state WHERE id = 1', (err, state) => {
+    if (err) {
+      console.error('Game state error:', err);
+      return res.json({ error: 'Game state error: ' + err.message });
+    }
+    if (!state) {
+      console.error('No game state found');
+      return res.json({ error: 'No game state found' });
+    }
+    try {
+      const currentDay = state.current_day;
+      const prices = JSON.parse(state.market_prices || '{}');
 
-      // Step 1: Process Mining
-      rows.forEach(row => {
-        let efforts = row.efforts ? JSON.parse(row.efforts) : { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
-        // Default action for no decisions
-        if (Object.values(efforts).reduce((a, b) => a + b, 0) === 0) {
-          efforts = { whiteDiamonds: 1, redRubies: 1, blueGems: 1, greenPoison: 2 };
+      // Get all players and their decisions
+      db.all('SELECT * FROM players', [], (err, players) => {
+        if (err) {
+          return res.json({ error: 'Failed to get players' });
         }
-        let mined = {};
-        for (let min in efforts) {
-          mined[min] = efforts[min];
-          totalSupply[min] += mined[min];
-        }
-        db.get('SELECT * FROM player_resources WHERE player_id = ?', [row.id], (err, resRow) => {
-          if (err || !resRow) return;
-          let stockpiles = JSON.parse(resRow.stockpiles);
-          for (let min in mined) stockpiles[min] += mined[min];
-          db.run('UPDATE player_resources SET stockpiles = ? WHERE player_id = ?', [JSON.stringify(stockpiles), row.id]);
-        });
-      });
+        db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, decisions) => {
+          if (err) decisions = [];
 
-      // Step 2: Process Raids
-      rows.forEach(row => {
-        const raidTarget = row.raidTarget;
-        const raidMaterial = row.raidMaterial;
-        const raidAmount = row.raidAmount || 0;
-        if (raidTarget && raidTarget !== 'none' && raidMaterial) {
-          db.get('SELECT id FROM players WHERE name = ?', [raidTarget], (err, targetRow) => {
-            if (err || !targetRow) return;
-            const targetId = targetRow.id;
-            db.get('SELECT stockpiles FROM player_resources WHERE player_id = ?', [targetId], (err, targetRes) => {
-              if (err || !targetRes) return;
-              const targetStockpiles = JSON.parse(targetRes.stockpiles);
-              db.get('SELECT stockpiles FROM player_resources WHERE player_id = ?', [row.id], (err, attackerRes) => {
-                if (err || !attackerRes) return;
-                let attackerStockpiles = JSON.parse(attackerRes.stockpiles);
-                if (Math.random() < 0.66 && targetStockpiles[raidMaterial] >= 4) {
-                  targetStockpiles[raidMaterial] -= 4;
-                  attackerStockpiles[raidMaterial] += 4;
-                  db.run('UPDATE player_resources SET stockpiles = ? WHERE player_id = ?', [JSON.stringify(targetStockpiles), targetId]);
-                  db.run('UPDATE player_resources SET stockpiles = ? WHERE player_id = ?', [JSON.stringify(attackerStockpiles), row.id]);
+          // Map for quick lookup
+          const decisionMap = {};
+          decisions.forEach(d => {
+            decisionMap[d.playerId] = {
+              efforts: JSON.parse(d.efforts || '{}'),
+              sales: JSON.parse(d.sales || '{}'),
+              raidTarget: d.raidTarget,
+              raidMaterial: d.raidMaterial
+            };
+          });
+
+          // 1. Initialize player data with current state
+          const playerData = {};
+          const news = [];
+          players.forEach(player => {
+            const decision = decisionMap[player.id] || { efforts: {}, sales: {}, raidTarget: 'none' };
+            playerData[player.id] = {
+              ...player,
+              stockpiles: JSON.parse(player.stockpiles || '{}'),
+              protectedResources: JSON.parse(player.protected_resources || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'),
+              credits: player.credits,
+              lastEfforts: decision.efforts,
+              sales: decision.sales,
+              raidTarget: decision.raidTarget,
+              raidMaterial: decision.raidMaterial
+            };
+          });
+
+          // STEP 1: MINING - Add mined resources to stockpiles
+          // console.log('Step 1: Mining');
+          const totalSupply = { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
+
+          players.forEach(player => {
+            const pdata = playerData[player.id];
+            // Merge protected resources into main stockpile (from previous day)
+            Object.keys(pdata.protectedResources).forEach(resource => {
+              pdata.stockpiles[resource] = (pdata.stockpiles[resource] || 0) + (pdata.protectedResources[resource] || 0);
+            });
+            pdata.protectedResources = { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
+            // Add mined resources
+            Object.keys(pdata.lastEfforts).forEach(resource => {
+              const mined = pdata.lastEfforts[resource] || 0;
+              pdata.stockpiles[resource] = (pdata.stockpiles[resource] || 0) + mined;
+              totalSupply[resource] += mined;
+            });
+          });
+          console.log('Total supply:', totalSupply);
+
+          // 2. Process raids BEFORE sales
+          // For each target/resource, collect all raiders
+          // console.log('Step 2: Raiding');
+          const raidResults = [];
+
+          // Group raids by target and resource
+          // const raidGroups = {};
+          const raidGroups = {};
+          // console.log('All decisions:', decisions);
+          decisions.forEach(d => {
+            // console.log('Checking decision:', d.playerId, 'raidTarget:', d.raidTarget, 'raidMaterial:', d.raidMaterial);
+            if (d.raidTarget && d.raidTarget !== 'none' && d.raidMaterial) {
+              // console.log('Valid raid found!');
+              const target = players.find(p => p.name === d.raidTarget);
+              // console.log('Target player found:', target ? target.name : 'NOT FOUND');
+              if (target && target.id !== d.playerId) {
+                if (!raidGroups[target.id]) raidGroups[target.id] = {};
+                if (!raidGroups[target.id][d.raidMaterial]) raidGroups[target.id][d.raidMaterial] = [];
+                raidGroups[target.id][d.raidMaterial].push(d.playerId);
+                // console.log('Raid added to groups');
+              }
+            }
+          });
+
+          // console.log('Raid groups found:', raidGroups);
+          // console.log('Processing raid groups...');
+
+          // Process each raid group
+          Object.entries(raidGroups).forEach(([targetId, resources]) => {
+            targetId = parseInt(targetId);
+            const targetData = playerData[targetId];
+            Object.entries(resources).forEach(([resource, attackerIds]) => {
+              // Filter attackers who have enough Green Poison
+              const validAttackers = attackerIds.filter(attackerId => {
+                return (playerData[attackerId].stockpiles.greenPoison || 0) >= 2;
+              });
+              
+              if (validAttackers.length === 0) {
+                // Log failed raids
+                attackerIds.forEach(attackerId => {
+                  const attackerName = playerData[attackerId].name;
+                  const targetName = targetData.name;
+                  news.push(`${attackerName} failed raiding ${getResourceIcon(resource)} from ${targetName} - not enough ${getResourceIcon('greenPoison')}`);
+                  raidResults.push({
+                    day: currentDay,
+                    attacker_id: attackerId,
+                    attacker_name: attackerName,
+                    target_id: targetId,
+                    target_name: targetName,
+                    resource,
+                    amount: 0,
+                    success: false
+                  });
+                });
+                return;
+              }
+              
+              // Remove 2 Green Poison from each valid attacker
+              validAttackers.forEach(attackerId => {
+                playerData[attackerId].stockpiles.greenPoison -= 2;
+              });
+              
+              // Calculate loot
+              const targetStock = targetData.stockpiles[resource] || 0;
+              const totalLootDemanded = 4 * validAttackers.length;
+              const actualLoot = Math.min(totalLootDemanded, targetStock);
+              const lootPerRaider = Math.floor(actualLoot / validAttackers.length);
+              const lootRemainder = actualLoot % validAttackers.length;
+              
+              // Remove loot from target
+              targetData.stockpiles[resource] = Math.max(0, targetStock - actualLoot);
+              
+              // Distribute loot to raiders (goes to protected resources)
+              validAttackers.forEach(attackerId => {
+                const attackerName = playerData[attackerId].name;
+                const targetName = targetData.name;
+                if (lootPerRaider > 0) {
+                  playerData[attackerId].protectedResources[resource] = (playerData[attackerId].protectedResources[resource] || 0) + lootPerRaider;
+                  news.push(`${attackerName} raided ${lootPerRaider} ${getResourceIcon(resource)} from ${targetName}`);
+                } else {
+                  news.push(`${attackerName} failed raiding ${getResourceIcon(resource)} from ${targetName}`);
                 }
+                raidResults.push({
+                  day: currentDay,
+                  attacker_id: attackerId,
+                  attacker_name: attackerName,
+                  target_id: targetId,
+                  target_name: targetName,
+                  resource,
+                  amount: lootPerRaider,
+                  success: lootPerRaider > 0
+                });
+              });
+              
+              // Note lost remainder
+              if (lootRemainder > 0) {
+                news.push(`${lootRemainder} ${getResourceIcon(resource)} lost in raid chaos on ${targetData.name}`);
+              }
+            });
+          });
+
+          // STEP 3: Calculate new market prices based on tonight's mining
+          console.log('Step 3: Market Calculation');
+
+          // Reset to base prices first
+          const newPrices = { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
+
+          // Fixed colony needs for 6-player game
+          const colonyNeeds = { whiteDiamonds: 15, redRubies: 15, blueGems: 15, greenPoison: 15 };
+
+          // Apply market adjustments based on supply vs demand
+          Object.keys(newPrices).forEach(resource => {
+            const supply = totalSupply[resource] || 0;
+            const need = colonyNeeds[resource];
+            let price = newPrices[resource];
+            // Removed all market news
+            if (supply >= need && supply <= need * 1.1) {
+              price = Math.min(price * 1.1, 30);
+            } else if (supply < need * 0.5) {
+              price = Math.min(price * 1.5, 50);
+            } else if (supply > need * 1.5) {
+              if (resource === 'whiteDiamonds') {
+                price = Math.max(price * 0.35, 5);
+              } else {
+                price = Math.max(price * 0.5, 5);
+              }
+            } else if (supply < need) {
+              price = Math.min(price * 1.2, 40);
+            } else {
+              price = Math.max(price * 0.8, 8);
+            }
+            newPrices[resource] = Math.round(price);
+          });
+
+          console.log('New market prices:', newPrices);
+
+          // STEP 4: Process sales at NEW market prices
+          console.log('Step 4: Sales Processing');
+          const playerSalesData = {}; // Track sales per player
+
+          players.forEach(player => {
+            const pdata = playerData[player.id];
+            let totalEarnings = 0;
+            playerSalesData[player.id] = [];
+
+            Object.keys(pdata.sales).forEach(resource => {
+              const sellAmount = Math.min(pdata.sales[resource] || 0, pdata.stockpiles[resource] || 0);
+              if (sellAmount > 0) {
+                const pricePerUnit = newPrices[resource] || 10; // Use NEW prices, not old prices
+                const earnings = sellAmount * pricePerUnit;
+                
+                totalEarnings += earnings;
+                pdata.credits += earnings;
+                pdata.stockpiles[resource] -= sellAmount;
+                
+                // Record individual sale
+                playerSalesData[player.id].push({
+                  resource,
+                  quantity: sellAmount,
+                  pricePerUnit,
+                  totalEarned: earnings
+                });
+                // Removed sales news
+              } else if ((pdata.sales[resource] || 0) > 0 && (pdata.stockpiles[resource] || 0) === 0) {
+                // Removed failed sales news
+              }
+            });
+            pdata.last_night_earnings = totalEarnings;
+          });
+
+          // STEP 5: Update game state with new prices
+          // 4. Update all players in database
+          const updatePromises = Object.values(playerData).map(pdata => {
+            return new Promise((resolve, reject) => {
+              db.run(
+                'UPDATE players SET stockpiles = ?, protected_resources = ?, credits = ?, lastEfforts = ?, last_night_earnings = ? WHERE id = ?',
+                [
+                  JSON.stringify(pdata.stockpiles), 
+                  JSON.stringify(pdata.protectedResources), 
+                  pdata.credits, 
+                  JSON.stringify(pdata.lastEfforts),
+                  pdata.last_night_earnings || 0,
+                  pdata.id
+                ],
+                (err) => {
+                  if (err) reject(err);
+                  else resolve();
+                }
+              );
+            });
+          });
+
+          // 5. Save raid logs
+          const raidPromises = raidResults.map(raid => {
+            return new Promise((resolve, reject) => {
+              db.run(
+                `INSERT INTO raid_logs (day, attacker_id, attacker_name, target_id, target_name, resource, amount, success)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [raid.day, raid.attacker_id, raid.attacker_name, raid.target_id, raid.target_name, raid.resource, raid.amount, raid.success],
+                (err) => {
+                  if (err) reject(err);
+                  else resolve();
+                }
+              );
+            });
+          });
+
+          // Save individual sales data
+          const salesPromises = Object.entries(playerSalesData).flatMap(([playerId, sales]) => {
+            return sales.map(sale => {
+              return new Promise((resolve, reject) => {
+                db.run(
+                  `INSERT INTO player_sales (playerId, day, resource, quantity, price_per_unit, total_earned)
+                   VALUES (?, ?, ?, ?, ?, ?)`,
+                  [playerId, currentDay, sale.resource, sale.quantity, sale.pricePerUnit, sale.totalEarned],
+                  (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                  }
+                );
               });
             });
           });
-        }
-      });
 
-      // Step 3: Process Trades
-      rows.forEach(row => {
-        let sales = row.sales ? JSON.parse(row.sales) : { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
-        db.get('SELECT * FROM player_resources WHERE player_id = ?', [row.id], (err, resRow) => {
-          if (err || !resRow) return;
-          let stockpiles = JSON.parse(resRow.stockpiles);
-          let credits = resRow.credits || 0;
-          for (let min in sales) {
-            if (sales[min] <= stockpiles[min]) {
-              stockpiles[min] -= sales[min];
-              credits += sales[min] * prices[min];
-            }
-          }
-          db.run('UPDATE player_resources SET stockpiles = ?, credits = ? WHERE player_id = ?', [JSON.stringify(stockpiles), credits, row.id]);
+          // Save news to database
+          const newsPromises = news.map(newsItem => {
+            return new Promise((resolve, reject) => {
+              db.run(
+                'INSERT INTO news (day, message) VALUES (?, ?)',
+                [currentDay, newsItem],
+                (err) => {
+                  if (err) reject(err);
+                  else resolve();
+                }
+              );
+            });
+          });
+
+          Promise.all([...updatePromises, ...raidPromises, ...newsPromises, ...salesPromises])
+            .then(() => {
+              // Update market prices and game state
+              // Use the calculated newPrices from the market calculation step
+              const adjustedNeeds = state.colony_needs ? JSON.parse(state.colony_needs) : {};
+              const activePlayers = players.length;
+              db.run(
+                `UPDATE game_state SET 
+                 current_day = current_day + 1, 
+                 market_prices = ?, 
+                 last_supply = ?,
+                 last_updated = CURRENT_TIMESTAMP 
+                 WHERE id = 1`,
+                [JSON.stringify(newPrices), JSON.stringify(totalSupply)],
+                (err) => {
+                  if (err) {
+                    console.error('Error updating game state:', err);
+                    return res.json({ error: 'Failed to update game state' });
+                  }
+                  // Clear today's decisions
+                  db.run('DELETE FROM decisions WHERE day = ?', [currentDay], (err) => {
+                    if (err) {
+                      console.error('Error clearing decisions:', err);
+                    }
+                    console.log('Day processing complete! News items:', news.length);
+                    res.json({ 
+                      success: true, 
+                      message: 'Day processed successfully!',
+                      newDay: currentDay + 1,
+                      news: news,
+                      newPrices,
+                      activePlayers,
+                      adjustedNeeds,
+                      totalSupply
+                    });
+                  });
+                }
+              );
+            })
+            .catch(err => {
+              console.error('Error processing day:', err);
+              res.json({ error: 'Failed to process day: ' + err.message });
+            });
         });
       });
+    } catch (error) {
+      console.error('Processing error:', error);
+      console.error('Error stack:', error.stack);
+      res.json({ error: 'Processing failed: ' + error.message });
+    }
+  });
+});
 
-      // Reset prices to initial locked order, then adjust based on needs
-      let newPrices = { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
-      for (let min in newPrices) {
-        const supply = totalSupply[min];
-        const need = needs[min];
-        if (min === 'whiteDiamonds' && supply > need * 1.5) {
-          newPrices[min] = Math.max(5, newPrices[min] * 0.4); // -60% for White Diamonds
-        } else if (supply >= need) {
-          newPrices[min] = Math.min(30, newPrices[min] * 1.1); // +10% bonus if need met
-        } else if (supply < need * 0.5) {
-          newPrices[min] = Math.min(50, newPrices[min] * 1.5); // +50% for severe shortage
-        } else if (supply > need * 1.5) {
-          newPrices[min] = Math.max(5, newPrices[min] * 0.5); // -50% for oversupply
-        }
+// Reset game endpoint
+app.post('/reset-game', (req, res) => {
+  console.log('🔄 Resetting game...');
+  
+  db.serialize(() => {
+    // Clear all data
+    db.run('DELETE FROM players', (err) => {
+      if (err) console.error('Error clearing players:', err);
+    });
+    
+    db.run('DELETE FROM decisions', (err) => {
+      if (err) console.error('Error clearing decisions:', err);
+    });
+    
+    db.run('DELETE FROM raid_logs', (err) => {
+      if (err) console.error('Error clearing raid logs:', err);
+    });
+    
+    db.run('DELETE FROM news', (err) => {
+      if (err) console.error('Error clearing news:', err);
+    });
+    
+    db.run('DELETE FROM player_sales', (err) => {
+      if (err) console.error('Error clearing sales:', err);
+    });
+    
+    // Reset game state
+    db.run(`UPDATE game_state SET 
+      current_day = 1,
+      market_prices = '{"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}',
+      last_supply = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      active_players = 0,
+      last_updated = CURRENT_TIMESTAMP
+      WHERE id = 1`, (err) => {
+      if (err) {
+        console.error('Error resetting game state:', err);
+        return res.json({ error: 'Failed to reset game state' });
       }
-
-      // Generate new random needs for the next day (15-25 range)
-      const newNeeds = {};
-      for (let min in needs) {
-        newNeeds[min] = 15 + Math.floor(Math.random() * 11); // Random between 15 and 25
-      }
-
-      db.run('UPDATE game_state SET current_day = ?, prices = ?, needs = ? WHERE id = 1', [day + 1, JSON.stringify(newPrices), JSON.stringify(newNeeds)]);
-      res.json({ success: true });
+      
+      console.log('✅ Game reset complete!');
+      res.json({ success: true, message: 'Game reset successfully!' });
     });
   });
 });
 
-// Test route to verify server
-app.get('/test', (req, res) => {
-  res.send('Test OK - Server is running!');
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Space Tribes server running on port ${PORT}`);
+  console.log(`🌐 Open http://localhost:${PORT} to play!`);
 });
-
-// Schedule processing at midnight UTC
-cron.schedule('0 0 * * *', () => {
-  fetch('http://localhost:3000/process-day', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
-  }).catch(err => console.error('Cron job error:', err));
-}, {
-  timezone: 'UTC'
-});
-
-app.listen(3000, () => console.log('Server on port 3000'));

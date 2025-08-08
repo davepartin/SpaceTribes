@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Tribes - Join the Colony</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Orbitron', 'Space Mono', sans-serif;
+      background: linear-gradient(135deg, #0a0f2c 0%, #1a1f3c 100%);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 20px;
+      overflow: hidden;
+    }
+
+    .stars {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0; }
+      50% { opacity: 1; }
+    }
+
+    .container {
+      max-width: 500px;
+      width: 100%;
+      background: rgba(15, 15, 35, 0.95);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: 0 0 40px rgba(0, 212, 255, 0.4);
+      border: 2px solid rgba(0, 212, 255, 0.3);
+      backdrop-filter: blur(10px);
+      animation: fadeIn 1s ease-out;
+      z-index: 10;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    h1 {
+      text-align: center;
+      color: #00d4ff;
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 0 0 30px rgba(0, 212, 255, 0.8);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .subtitle {
+      text-align: center;
+      color: #00ffcc;
+      margin-bottom: 30px;
+      font-size: 1.1em;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      color: #00d4ff;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.9em;
+      letter-spacing: 1px;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    select {
+      width: 100%;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 2px solid rgba(0, 212, 255, 0.3);
+      border-radius: 8px;
+      color: white;
+      font-size: 1em;
+      font-family: 'Space Mono', monospace;
+      transition: all 0.3s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="password"]:focus,
+    select:focus {
+      outline: none;
+      border-color: #00d4ff;
+      box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    select option {
+      background: #0a0f2c;
+      color: white;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #00d4ff 0%, #00aacc 100%);
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-size: 1.2em;
+      font-weight: 700;
+      font-family: 'Orbitron', sans-serif;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transition: all 0.3s ease;
+      margin-top: 10px;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #00aacc 0%, #0088aa 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 212, 255, 0.5);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    #error {
+      color: #ff6666;
+      text-align: center;
+      margin-top: 20px;
+      padding: 10px;
+      background: rgba(255, 102, 102, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 102, 102, 0.3);
+      display: none;
+    }
+
+    .info-box {
+      background: rgba(0, 212, 255, 0.1);
+      border: 1px solid rgba(0, 212, 255, 0.3);
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 0.9em;
+      line-height: 1.6;
+    }
+
+    .race-emoji {
+      font-size: 2em;
+      margin-right: 10px;
+      vertical-align: middle;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #00d4ff;
+      animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="stars" id="stars"></div>
+  
+  <div class="container">
+    <h1>🚀 SPACE TRIBES 🚀</h1>
+    <p class="subtitle">Join the Galactic Mining Colony</p>
+    
+    <form onsubmit="return login(event)">
+      <div class="form-group">
+        <label for="playerSelect">Choose Your Commander</label>
+        <select id="playerSelect" required>
+          <option value="">-- Select Commander --</option>
+          <option value="Dave">🐻 Dave the Endorian</option>
+          <option value="Silas">🦎 Silas the Silurian</option>
+          <option value="Chris">🔆 Chris the Elantrian</option>
+          <option value="Brian">🧠 Brian the Psychlon</option>
+          <option value="Joel">🛡️ Joel the Leojian</option>
+          <option value="Curtis">💧 Curtis the Boucher</option>
+        </select>
+      </div>
+
+      <button type="submit" id="loginBtn">
+        <span id="btnText">ENTER THE COLONY</span>
+      </button>
+    </form>
+    <div id="error"></div>
+
+    <div class="info-box">
+      <strong>🎮 Game Info:</strong><br>
+      • Mine resources with robot workers<br>
+      • Trade on the galactic market<br>
+      • Raid other players (costs 2 Green Poison)<br>
+      • Become the richest space commander!
+    </div>
+  </div>
+
+  <script>
+    // Create starfield
+    function createStars() {
+      const starsContainer = document.getElementById('stars');
+      const starCount = 100;
+      
+      for (let i = 0; i < starCount; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        star.style.left = Math.random() * 100 + '%';
+        star.style.top = Math.random() * 100 + '%';
+        star.style.animationDelay = Math.random() * 3 + 's';
+        star.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        starsContainer.appendChild(star);
+      }
+    }
+
+    createStars();
+
+    function showError(message) {
+      const errorDiv = document.getElementById('error');
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      setTimeout(() => {
+        errorDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    function login(event) {
+      event.preventDefault();
+      
+      const name = document.getElementById('playerSelect').value;
+      const btn = document.getElementById('loginBtn');
+      const btnText = document.getElementById('btnText');
+
+      if (!name) {
+        showError('Please select a commander!');
+        return false;
+      }
+
+      // Show loading
+      btn.disabled = true;
+      btnText.innerHTML = '<div class="loading"></div>';
+
+      fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, race: name, pin: '0000' })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          showError(data.error);
+          btn.disabled = false;
+          btnText.textContent = 'ENTER THE COLONY';
+        } else {
+          btnText.textContent = '🚀 LAUNCHING...';
+          setTimeout(() => {
+            window.location.href = `/main.html?playerId=${data.playerId}`;
+          }, 500);
+        }
+      })
+      .catch(err => {
+        console.error('Login error:', err);
+        showError('Connection failed. Please try again.');
+        btn.disabled = false;
+        btnText.textContent = 'ENTER THE COLONY';
+      });
+
+      return false;
+    }
+  </script>
+</body>
+</html>
