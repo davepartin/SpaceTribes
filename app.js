@@ -454,6 +454,42 @@ app.post('/process-day', (req, res) => {
           });
           console.log('Total supply:', totalSupply);
 
+          // STEP 1.5: AUTO-ASSIGN RESOURCES FOR ABSENT PLAYERS
+          console.log('Step 1.5: Auto-assigning resources for absent players');
+
+          players.forEach(player => {
+            const pdata = playerData[player.id];
+            const hasSubmitted = decisionMap[player.id] && Object.keys(decisionMap[player.id].efforts).length > 0;
+            
+            if (!hasSubmitted) {
+              // Player didn't submit decisions - give them default resources
+              console.log(`Auto-assigning resources to ${player.name}`);
+              
+              // Add auto-assigned resources
+              pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
+              pdata.stockpiles.blueGems = (pdata.stockpiles.blueGems || 0) + 1;
+              pdata.stockpiles.redRubies = (pdata.stockpiles.redRubies || 0) + 1;
+              pdata.stockpiles.greenPoison = (pdata.stockpiles.greenPoison || 0) + 1;
+              
+              // Update their lastEfforts to show what they "mined"
+              pdata.lastEfforts = {
+                whiteDiamonds: 2,
+                redRubies: 1,
+                blueGems: 1,
+                greenPoison: 1
+              };
+              
+              // Add to total supply for market calculations
+              totalSupply.whiteDiamonds += 2;
+              totalSupply.redRubies += 1;
+              totalSupply.blueGems += 1;
+              totalSupply.greenPoison += 1;
+              
+              // Add news message
+              news.push(`${player.name} was auto-assigned: 2💎 1🔻 1🔷 1🌱 (absent)`);
+            }
+          });
+
           // 2. Process raids BEFORE sales
           // For each target/resource, collect all raiders
           // console.log('Step 2: Raiding');
