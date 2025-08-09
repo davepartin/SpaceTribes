@@ -930,6 +930,8 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
 
     // Adjust robot assignments
     function adjustEffort(resource, change) {
+      if (typeof trackUserActivity === 'function') trackUserActivity();
+      
       const totalAssigned = Object.values(robotAssignments).reduce((a, b) => a + b, 0);
       
       if (change > 0 && totalAssigned >= 10) return;
@@ -943,6 +945,8 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
 
     // Adjust sell assignments
     function adjustSell(resource, change) {
+      if (typeof trackUserActivity === 'function') trackUserActivity();
+      
       const available = gameData.stockpiles ? (gameData.stockpiles[resource] || 0) : 0;
       const maxSell = Math.min(available, 15); // Can't sell more than 15 OR available amount
       
@@ -1033,14 +1037,21 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
         document.getElementById('playerIcon').textContent = iconMap[gameData.playerName] || '🚀';
         document.getElementById('tribeName').textContent = gameData.playerRace || 'Unknown Tribe';
 
-        // Load current decisions
-        Object.keys(robotAssignments).forEach(resource => {
-          robotAssignments[resource] = gameData.efforts[resource] || 0;
-          sellAssignments[resource] = gameData.sales[resource] || 0;
-          
-          document.getElementById(`effortCount-${resource}`).textContent = robotAssignments[resource];
-          document.getElementById(`sellCount-${resource}`).textContent = sellAssignments[resource];
-        });
+        // Load current decisions - BUT ONLY if user hasn't made changes
+        const hasUserChanges = Object.keys(robotAssignments).some(resource => 
+          (robotAssignments[resource] !== (gameData.efforts[resource] || 0)) ||
+          (sellAssignments[resource] !== (gameData.sales[resource] || 0))
+        );
+        
+        if (!hasUserChanges) {
+          Object.keys(robotAssignments).forEach(resource => {
+            robotAssignments[resource] = gameData.efforts[resource] || 0;
+            sellAssignments[resource] = gameData.sales[resource] || 0;
+            
+            document.getElementById(`effortCount-${resource}`).textContent = robotAssignments[resource];
+            document.getElementById(`sellCount-${resource}`).textContent = sellAssignments[resource];
+          });
+        }
 
         updateRobotDisplay();
 
@@ -1482,13 +1493,38 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
       }, 500);
     }
 
+    // Track user activity to pause auto-refresh
+    let lastUserActivity = Date.now();
+    let userIsActive = false;
+    
+    // Update activity tracker
+    function trackUserActivity() {
+      lastUserActivity = Date.now();
+      userIsActive = true;
+      // Clear activity flag after 10 seconds of no interaction
+      setTimeout(() => {
+        if (Date.now() - lastUserActivity >= 10000) {
+          userIsActive = false;
+        }
+      }, 10000);
+    }
+
     // Initialize page
     document.addEventListener('DOMContentLoaded', function() {
       initializeRobots();
       loadGameData();
       
-      // Auto-refresh every 30 seconds to show other players' actions
-      setInterval(loadGameData, 30000);
+      // Track user interactions
+      document.addEventListener('click', trackUserActivity);
+      document.addEventListener('input', trackUserActivity);
+      document.addEventListener('change', trackUserActivity);
+      
+      // Smart auto-refresh - only when user is not actively making changes
+      setInterval(() => {
+        if (!userIsActive) {
+          loadGameData();
+        }
+      }, 30000);
 
       document.getElementById('raidTarget').addEventListener('change', updateDiceSection);
       document.getElementById('raidMaterial').addEventListener('change', updateDiceSection);
