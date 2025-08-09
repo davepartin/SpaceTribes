@@ -1179,27 +1179,33 @@
       const statusGrid = document.getElementById('playerStatusGrid');
       const statusDay = document.getElementById('statusDay');
       
-      if (!statusGrid || !gameData.leaderboard) return;
+      if (!statusGrid) return;
       
       statusDay.textContent = gameData.currentDay || '?';
       statusGrid.innerHTML = '';
       
-      gameData.leaderboard.forEach(player => {
+      // All possible commanders
+      const allCommanders = ['Dave', 'Silas', 'Chris', 'Brian', 'Joel', 'Curtis'];
+      
+      allCommanders.forEach(commanderName => {
         const statusDiv = document.createElement('div');
         statusDiv.className = 'player-status';
         
-        if (player.hasSubmitted === false && player.hasPlayed === false) {
-          // Never played
+        // Find this player in the leaderboard (if they've started playing)
+        const player = gameData.leaderboard ? gameData.leaderboard.find(p => p.name === commanderName) : null;
+        
+        if (!player) {
+          // Player has never started the game
           statusDiv.classList.add('status-never');
-          statusDiv.innerHTML = `${player.name}<br>Never Started`;
+          statusDiv.innerHTML = `${commanderName}<br>Never Started`;
         } else if (player.hasSubmitted === true) {
-          // Submitted for current day
+          // Player has submitted for current day
           statusDiv.classList.add('status-submitted');
-          statusDiv.innerHTML = `${player.name}<br>✅ Day ${gameData.currentDay} Complete`;
+          statusDiv.innerHTML = `${commanderName}<br>✅ Day ${gameData.currentDay} Complete`;
         } else {
-          // Waiting for submission
+          // Player has started but waiting for submission
           statusDiv.classList.add('status-waiting');
-          statusDiv.innerHTML = `${player.name}<br>⏳ Waiting for Day ${gameData.currentDay}`;
+          statusDiv.innerHTML = `${commanderName}<br>⏳ Waiting for Day ${gameData.currentDay}`;
         }
         
         statusGrid.appendChild(statusDiv);
