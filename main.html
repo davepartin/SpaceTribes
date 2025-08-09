@@ -98,6 +98,92 @@
       .game-grid {
         grid-template-columns: 1fr;
       }
+      
+      /* Mobile optimizations for iPhone */
+      body {
+        padding: 10px;
+        font-size: 1rem;
+      }
+      
+      h1 {
+        font-size: 2rem;
+        margin-bottom: 15px;
+      }
+      
+      .tribe-header {
+        font-size: 1.5rem;
+        padding: 10px;
+      }
+      
+      #playerIcon {
+        font-size: 2rem;
+        margin-right: 10px;
+      }
+      
+      .player-header {
+        padding: 10px;
+        font-size: 1rem;
+      }
+      
+      .material-row {
+        padding: 10px 15px;
+        margin: 8px 0;
+      }
+      
+      .material-icon {
+        font-size: 1.5rem;
+        margin-right: 8px;
+      }
+      
+      .sell-controls {
+        gap: 6px;
+      }
+      
+      .sell-controls button {
+        width: 32px;
+        height: 32px;
+        font-size: 1.3rem;
+      }
+      
+      .count-display {
+        padding: 6px 10px;
+        font-size: 1rem;
+        min-width: 40px;
+      }
+      
+      section, .decision-section {
+        padding: 15px;
+        margin-bottom: 15px;
+      }
+      
+      h2 {
+        font-size: 1.4rem;
+        margin-bottom: 10px;
+      }
+      
+      .submit-btn {
+        padding: 12px 20px;
+        font-size: 1rem;
+        margin: 5px;
+      }
+      
+      .player-status-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 8px;
+      }
+      
+      .player-status {
+        padding: 6px 8px;
+        font-size: 0.8rem;
+      }
+      
+      table {
+        font-size: 0.9rem;
+      }
+      
+      th, td {
+        padding: 6px 8px;
+      }
     }
     
     section, .decision-section {
@@ -181,11 +267,11 @@
     }
     
     .sell-controls button {
-      width: 48px;
-      height: 48px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       border: none;
-      font-size: 2rem;
+      font-size: 1.6rem;
       font-weight: bold;
       background: linear-gradient(135deg, #00ffff, #00ccff);
       color: #222;
@@ -399,6 +485,7 @@
       margin: 30px 0;
       padding: 20px;
       border-top: 2px solid rgba(255, 255, 255, 0.1);
+      display: none; /* Hide by default */
     }
 
     .admin-buttons {
@@ -702,7 +789,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">💎</span>
-          <span>White Diamonds (base $20)</span>
+          <span>💎 $20</span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustEffort('whiteDiamonds', -1)">➖</button>
@@ -714,7 +801,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🔻</span>
-          <span>Red Rubies (base $15)</span>
+          <span>🔻 $15</span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustEffort('redRubies', -1)">➖</button>
@@ -726,7 +813,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🔷</span>
-          <span>Blue Gems (base $12)</span>
+          <span>🔷 $12</span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustEffort('blueGems', -1)">➖</button>
@@ -738,7 +825,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🌱</span>
-          <span>Green Poison (base $10)</span>
+          <span>🌱 $10</span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustEffort('greenPoison', -1)">➖</button>
@@ -757,7 +844,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">💎</span>
-          <span>White Diamonds | Available: <span id="available-whiteDiamonds">0</span></span>
+          <span>💎 Qty: <span id="available-whiteDiamonds">0</span></span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustSell('whiteDiamonds', -1)">➖</button>
@@ -769,7 +856,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🔻</span>
-          <span>Red Rubies | Available: <span id="available-redRubies">0</span></span>
+          <span>🔻 Qty: <span id="available-redRubies">0</span></span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustSell('redRubies', -1)">➖</button>
@@ -781,7 +868,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🔷</span>
-          <span>Blue Gems | Available: <span id="available-blueGems">0</span></span>
+          <span>🔷 Qty: <span id="available-blueGems">0</span></span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustSell('blueGems', -1)">➖</button>
@@ -793,7 +880,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🌱</span>
-          <span>Green Poison | Available: <span id="available-greenPoison">0</span></span>
+          <span>🌱 Qty: <span id="available-greenPoison">0</span></span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustSell('greenPoison', -1)">➖</button>
@@ -1177,6 +1264,17 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
         } else {
           document.getElementById('raidMaterial').value = '';
         }
+        
+        // Show admin section only for Dave
+        const adminSection = document.querySelector('.admin-section');
+        if (adminSection) {
+          if (gameData.playerName === 'Dave') {
+            adminSection.style.display = 'block';
+          } else {
+            adminSection.style.display = 'none';
+          }
+        }
+        
         updatePlayerStatus();
       } catch (error) {
         console.error('Error in updateUI:', error);
