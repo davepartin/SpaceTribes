@@ -561,27 +561,25 @@
       padding: 8px 12px;
       border-radius: 8px;
       font-size: 0.9rem;
+      text-align: center;
+      font-weight: bold;
     }
 
-    .status-never { background: rgba(128, 128, 128, 0.2); color: #aaa; }
-    .status-waiting { background: rgba(255, 165, 0, 0.2); color: #ffaa00; }
-    .status-submitted { background: rgba(0, 255, 0, 0.2); color: #00ff00; }
-
-    @media (max-width: 768px) {
-      .game-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .admin-buttons {
-        flex-direction: column;
-        gap: 10px;
-      }
-
-      .raid-controls {
-        flex-direction: column;
-        gap: 10px;
-      }
+    .status-never { 
+      background: rgba(128, 128, 128, 0.2); 
+      color: #aaa; 
     }
+
+    .status-waiting { 
+      background: rgba(255, 165, 0, 0.2); 
+      color: #ffaa00; 
+    }
+
+    .status-submitted { 
+      background: rgba(0, 255, 0, 0.2); 
+      color: #00ff00; 
+    }
+    /* ...existing code... */
   </style>
 </head>
 <body>
@@ -595,6 +593,13 @@
     <div class="player-header">
       <div>Day <span id="currentDay">?</span> | Player: <span id="playerName">Loading...</span> | Credits: $<span id="credits">0</span></div>
       <div style="margin-top: 10px;">Available Robots: <span id="robotCount">10</span>/10 | Active Players: <span id="activePlayers">0</span></div>
+    </div>
+
+    <div class="player-status-header">
+      <h3>📊 Player Status - Day <span id="statusDay">?</span></h3>
+      <div class="player-status-grid" id="playerStatusGrid">
+        <!-- Player status will be populated here -->
+      </div>
     </div>
 
     <div class="game-grid">
@@ -1162,10 +1167,43 @@
         } else {
           document.getElementById('raidMaterial').value = '';
         }
+        updatePlayerStatus();
       } catch (error) {
         console.error('Error in updateUI:', error);
         showMessage('Error updating interface', 'error');
       }
+    }
+
+    // Update player status display
+    function updatePlayerStatus() {
+      const statusGrid = document.getElementById('playerStatusGrid');
+      const statusDay = document.getElementById('statusDay');
+      
+      if (!statusGrid || !gameData.leaderboard) return;
+      
+      statusDay.textContent = gameData.currentDay || '?';
+      statusGrid.innerHTML = '';
+      
+      gameData.leaderboard.forEach(player => {
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'player-status';
+        
+        if (player.hasSubmitted === false && player.hasPlayed === false) {
+          // Never played
+          statusDiv.classList.add('status-never');
+          statusDiv.innerHTML = `${player.name}<br>Never Started`;
+        } else if (player.hasSubmitted === true) {
+          // Submitted for current day
+          statusDiv.classList.add('status-submitted');
+          statusDiv.innerHTML = `${player.name}<br>✅ Day ${gameData.currentDay} Complete`;
+        } else {
+          // Waiting for submission
+          statusDiv.classList.add('status-waiting');
+          statusDiv.innerHTML = `${player.name}<br>⏳ Waiting for Day ${gameData.currentDay}`;
+        }
+        
+        statusGrid.appendChild(statusDiv);
+      });
     }
 
     // Submit decisions

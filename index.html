@@ -223,6 +223,10 @@
           <option value="Curtis">💧 Curtis the Boucher</option>
         </select>
       </div>
+      <div class="form-group">
+        <label for="pinInput">4-Digit PIN</label>
+        <input type="password" id="pinInput" placeholder="Enter your 4-digit PIN" maxlength="4" required>
+      </div>
 
       <button type="submit" id="loginBtn">
         <span id="btnText">ENTER THE COLONY</span>
@@ -271,11 +275,17 @@
       event.preventDefault();
       
       const name = document.getElementById('playerSelect').value;
+      const pin = document.getElementById('pinInput').value;
       const btn = document.getElementById('loginBtn');
       const btnText = document.getElementById('btnText');
 
       if (!name) {
         showError('Please select a commander!');
+        return false;
+      }
+
+      if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+        showError('Please enter a 4-digit PIN!');
         return false;
       }
 
@@ -286,7 +296,7 @@
       fetch('/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name, race: name, pin: '0000' })
+        body: JSON.stringify({ name: name, pin: pin })
       })
       .then(res => res.json())
       .then(data => {

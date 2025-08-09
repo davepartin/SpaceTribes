@@ -121,7 +121,7 @@ db.serialize(() => {
 
 // Login endpoint - fixed to accept name instead of race
 app.post('/login', (req, res) => {
-  const { name } = req.body;
+  const { name, pin } = req.body;
   console.log('Login attempt:', { name });
   
   if (!name) {
@@ -135,10 +135,14 @@ app.post('/login', (req, res) => {
     }
 
     if (row) {
-      // Player exists - log them in
-      res.json({ playerId: row.id, race: row.race });
+      // Player exists - check PIN
+      if (row.pin === pin) {
+        res.json({ playerId: row.id, race: row.race });
+      } else {
+        res.json({ error: 'Incorrect PIN' });
+      }
     } else {
-      // Create new player with tribe mapping
+      // Create new player
       const tribeMap = {
         'Dave': 'Tribe of Endor',
         'Silas': 'Tribe of Siluria', 
@@ -150,7 +154,7 @@ app.post('/login', (req, res) => {
       const race = tribeMap[name] || name;
       db.run(
         'INSERT INTO players (name, race, pin) VALUES (?, ?, ?)',
-        [name, race, '0000'],
+        [name, race, pin],
         function(err) {
           if (err) {
             console.error('Insert error:', err);
@@ -226,7 +230,9 @@ app.get('/game-data/:playerId', (req, res) => {
                           name: p.name,
                           race: p.race,
                           credits: p.credits,
-                          stockpiles: JSON.parse(p.stockpiles || '{}')
+                          stockpiles: JSON.parse(p.stockpiles || '{}'),
+                          hasSubmitted: decisions.some(d => d.playerId === p.id),
+                          hasPlayed: p.credits > 100 || Object.values(JSON.parse(p.stockpiles || '{}')).some(v => v > 0)
                         }));
 
                         // Calculate available robots
