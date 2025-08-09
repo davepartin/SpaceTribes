@@ -224,57 +224,72 @@ app.get('/game-data/:playerId', (req, res) => {
                       'SELECT * FROM decisions WHERE playerId = ? AND day = ?',
                       [playerId, currentDay],
                       (err, decision) => {
-                        // Format leaderboard
-                        const leaderboard = allPlayers.map(p => ({
-                          id: p.id,
-                          name: p.name,
-                          race: p.race,
-                          credits: p.credits,
-                          stockpiles: JSON.parse(p.stockpiles || '{}'),
-                          hasSubmitted: decisions.some(d => d.playerId === p.id),
-                          hasPlayed: p.credits > 100 || Object.values(JSON.parse(p.stockpiles || '{}')).some(v => v > 0)
-                        }));
+                        // Get today's decisions for status checking
+                        db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, todayDecisions) => {
+                          if (err) todayDecisions = [];
 
-                        // Calculate available robots
-                        const playerStockpiles = JSON.parse(player.stockpiles || '{}');
-                        const protectedResources = JSON.parse(player.protected_resources || '{}');
-                        const totalStockpiles = {};
-                        const allResources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
-                        allResources.forEach(resource => {
-                          totalStockpiles[resource] = (playerStockpiles[resource] || 0) + (protectedResources[resource] || 0);
-                        });
+                          const leaderboard = allPlayers.map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            race: p.race,
+                            credits: p.credits,
+                            stockpiles: JSON.parse(p.stockpiles || '{}'),
+                            hasSubmitted: todayDecisions.some(d => d.playerId === p.id),
+                            hasPlayed: p.credits > 100 || Object.values(JSON.parse(p.stockpiles || '{}')).some(v => v > 0)
+                          }));
 
-                        // Count active players for this day
-                        db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, decisions) => {
-                          const activePlayers = decisions ? decisions.length : 0;
-                          const lastSupply = JSON.parse(gameState.last_supply || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}');
-                          
-                          // Prepare response
-                          const response = {
-                            currentDay,
-                            playerId: player.id,
-                            playerName: player.name,
-                            playerRace: player.race,
-                            credits: player.credits,
-                            stockpiles: playerStockpiles,
-                            protectedResources: protectedResources,
-                            totalStockpiles: totalStockpiles,
-                            lastEfforts: JSON.parse(player.lastEfforts || '{}'),
-                            prices,
-                            needs,
-                            lastSupply: lastSupply,
-                            activePlayers: activePlayers,
-                            leaderboard,
-                            news: newsMessages,
-                            efforts: decision ? JSON.parse(decision.efforts || '{}') : {},
-                            sales: decision ? JSON.parse(decision.sales || '{}') : {},
-                            raidTarget: decision ? decision.raidTarget : 'none',
-                            raidMaterial: decision ? decision.raidMaterial : null,
-                            hasSubmitted: !!decision,
-                            lastNightSales: lastNightSales || [],
-                            lastNightEarnings: player.last_night_earnings || 0
-                          };
-                          res.json(response);
+                          // Format leaderboard
+                          const formattedLeaderboard = leaderboard.map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            race: p.race,
+                            credits: p.credits,
+                            stockpiles: p.stockpiles,
+                            hasSubmitted: p.hasSubmitted,
+                            hasPlayed: p.hasPlayed
+                          }));
+
+                          // Calculate available robots
+                          const playerStockpiles = JSON.parse(player.stockpiles || '{}');
+                          const protectedResources = JSON.parse(player.protected_resources || '{}');
+                          const totalStockpiles = {};
+                          const allResources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
+                          allResources.forEach(resource => {
+                            totalStockpiles[resource] = (playerStockpiles[resource] || 0) + (protectedResources[resource] || 0);
+                          });
+
+                          // Count active players for this day
+                          db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, decisions) => {
+                            const activePlayers = decisions ? decisions.length : 0;
+                            const lastSupply = JSON.parse(gameState.last_supply || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}');
+                            
+                            // Prepare response
+                            const response = {
+                              currentDay,
+                              playerId: player.id,
+                              playerName: player.name,
+                              playerRace: player.race,
+                              credits: player.credits,
+                              stockpiles: playerStockpiles,
+                              protectedResources: protectedResources,
+                              totalStockpiles: totalStockpiles,
+                              lastEfforts: JSON.parse(player.lastEfforts || '{}'),
+                              prices,
+                              needs,
+                              lastSupply: lastSupply,
+                              activePlayers: activePlayers,
+                              leaderboard: formattedLeaderboard,
+                              news: newsMessages,
+                              efforts: decision ? JSON.parse(decision.efforts || '{}') : {},
+                              sales: decision ? JSON.parse(decision.sales || '{}') : {},
+                              raidTarget: decision ? decision.raidTarget : 'none',
+                              raidMaterial: decision ? decision.raidMaterial : null,
+                              hasSubmitted: !!decision,
+                              lastNightSales: lastNightSales || [],
+                              lastNightEarnings: player.last_night_earnings || 0
+                            };
+                            res.json(response);
+                          });
                         });
                       }
                     );
