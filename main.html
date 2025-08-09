@@ -1183,18 +1183,18 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
       statusDay.textContent = gameData.currentDay || '?';
       statusGrid.innerHTML = '';
       
-      // All possible commanders
+      // All possible commanders - ALWAYS show these 6 names
       const allCommanders = ['Dave', 'Silas', 'Chris', 'Brian', 'Joel', 'Curtis'];
       
       allCommanders.forEach(commanderName => {
         const statusDiv = document.createElement('div');
         statusDiv.className = 'player-status';
         
-        // Find this player in the leaderboard (if they've started playing)
+        // Find this player in the leaderboard (if they've logged in)
         const player = gameData.leaderboard ? gameData.leaderboard.find(p => p.name === commanderName) : null;
         
         if (!player) {
-          // Player has never started the game
+          // Player has never logged in
           statusDiv.classList.add('status-never');
           statusDiv.innerHTML = `${commanderName}<br>Never Started`;
         } else if (player.hasSubmitted === true) {
@@ -1202,7 +1202,7 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
           statusDiv.classList.add('status-submitted');
           statusDiv.innerHTML = `${commanderName}<br>✅ Day ${gameData.currentDay} Complete`;
         } else {
-          // Player has started but waiting for submission
+          // Player has logged in but waiting for submission
           statusDiv.classList.add('status-waiting');
           statusDiv.innerHTML = `${commanderName}<br>⏳ Waiting for Day ${gameData.currentDay}`;
         }
