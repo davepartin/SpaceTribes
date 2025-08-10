@@ -29,8 +29,8 @@ db.serialize(() => {
       name TEXT UNIQUE NOT NULL,
       race TEXT NOT NULL,
       pin TEXT NOT NULL,
-      credits INTEGER DEFAULT 100,
-      stockpiles TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      credits INTEGER DEFAULT 0,
+      stockpiles TEXT DEFAULT '{"whiteDiamonds":3,"redRubies":3,"blueGems":3,"greenPoison":3}',
       protected_resources TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       lastEfforts TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -122,7 +122,6 @@ db.serialize(() => {
 // Login endpoint - fixed to accept name instead of race
 app.post('/login', (req, res) => {
   const { name, pin } = req.body;
-  console.log('Login attempt:', { name });
   
   if (!name) {
     return res.json({ error: 'Please select a commander' });
@@ -187,7 +186,6 @@ app.get('/game-data/:playerId', (req, res) => {
         console.error('Player query error:', err);
         return res.json({ error: 'Player not found' });
       }
-      console.log('Player data loaded:', player.name);
 
       // Get last night's sales data
       db.all(
@@ -198,7 +196,6 @@ app.get('/game-data/:playerId', (req, res) => {
             console.error('Sales query error:', err);
             lastNightSales = [];
           }
-          console.log('Sales data loaded:', lastNightSales.length, 'records');
 
           // Get all players for leaderboard
           db.all('SELECT * FROM players ORDER BY credits DESC', [], (err, allPlayers) => {
@@ -452,10 +449,8 @@ app.post('/process-day', (req, res) => {
               totalSupply[resource] += mined;
             });
           });
-          console.log('Total supply:', totalSupply);
-
+          
           // STEP 1.5: AUTO-ASSIGN RESOURCES FOR ABSENT PLAYERS
-          console.log('Step 1.5: Auto-assigning resources for absent players');
 
           players.forEach(player => {
             const pdata = playerData[player.id];
@@ -463,7 +458,6 @@ app.post('/process-day', (req, res) => {
             
             if (!hasSubmitted) {
               // Player didn't submit decisions - give them default resources
-              console.log(`Auto-assigning resources to ${player.name}`);
               
               // Add auto-assigned resources
               pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
@@ -492,30 +486,49 @@ app.post('/process-day', (req, res) => {
 
           // 2. Process raids BEFORE sales
           // For each target/resource, collect all raiders
-          // console.log('Step 2: Raiding');
           const raidResults = [];
 
           // Group raids by target and resource
-          // const raidGroups = {};
           const raidGroups = {};
-          // console.log('All decisions:', decisions);
           decisions.forEach(d => {
-            // console.log('Checking decision:', d.playerId, 'raidTarget:', d.raidTarget, 'raidMaterial:', d.raidMaterial);
             if (d.raidTarget && d.raidTarget !== 'none' && d.raidMaterial) {
-              // console.log('Valid raid found!');
               const target = players.find(p => p.name === d.raidTarget);
-              // console.log('Target player found:', target ? target.name : 'NOT FOUND');
-              if (target && target.id !== d.playerId) {
+              const attacker = players.find(p => p.id === d.playerId);
+              
+              if (!target) {
+                // Target doesn't exist - report failed raid
+                news.push(`${attacker.name} failed raiding ${getResourceIcon(d.raidMaterial)} from ${d.raidTarget} - target not found`);
+                raidResults.push({
+                  day: currentDay,
+                  attacker_id: d.playerId,
+                  attacker_name: attacker.name,
+                  target_id: null,
+                  target_name: d.raidTarget,
+                  resource: d.raidMaterial,
+                  amount: 0,
+                  success: false
+                });
+              } else if (target.id === d.playerId) {
+                // Trying to raid themselves - report failed raid
+                news.push(`${attacker.name} failed raiding ${getResourceIcon(d.raidMaterial)} from themselves - cannot raid yourself`);
+                raidResults.push({
+                  day: currentDay,
+                  attacker_id: d.playerId,
+                  attacker_name: attacker.name,
+                  target_id: target.id,
+                  target_name: target.name,
+                  resource: d.raidMaterial,
+                  amount: 0,
+                  success: false
+                });
+              } else {
+                // Valid raid - add to groups for processing
                 if (!raidGroups[target.id]) raidGroups[target.id] = {};
                 if (!raidGroups[target.id][d.raidMaterial]) raidGroups[target.id][d.raidMaterial] = [];
                 raidGroups[target.id][d.raidMaterial].push(d.playerId);
-                // console.log('Raid added to groups');
               }
             }
           });
-
-          // console.log('Raid groups found:', raidGroups);
-          // console.log('Processing raid groups...');
 
           // Process each raid group
           Object.entries(raidGroups).forEach(([targetId, resources]) => {
@@ -523,27 +536,36 @@ app.post('/process-day', (req, res) => {
             const targetData = playerData[targetId];
             Object.entries(resources).forEach(([resource, attackerIds]) => {
               // Filter attackers who have enough Green Poison
-              const validAttackers = attackerIds.filter(attackerId => {
-                return (playerData[attackerId].stockpiles.greenPoison || 0) >= 2;
+              const validAttackers = [];
+              const invalidAttackers = [];
+              
+              attackerIds.forEach(attackerId => {
+                if ((playerData[attackerId].stockpiles.greenPoison || 0) >= 2) {
+                  validAttackers.push(attackerId);
+                } else {
+                  invalidAttackers.push(attackerId);
+                }
               });
               
-              if (validAttackers.length === 0) {
-                // Log failed raids
-                attackerIds.forEach(attackerId => {
-                  const attackerName = playerData[attackerId].name;
-                  const targetName = targetData.name;
-                  news.push(`${attackerName} failed raiding ${getResourceIcon(resource)} from ${targetName} - not enough ${getResourceIcon('greenPoison')}`);
-                  raidResults.push({
-                    day: currentDay,
-                    attacker_id: attackerId,
-                    attacker_name: attackerName,
-                    target_id: targetId,
-                    target_name: targetName,
-                    resource,
-                    amount: 0,
-                    success: false
-                  });
+              // Log failed raids for attackers without enough Green Poison
+              invalidAttackers.forEach(attackerId => {
+                const attackerName = playerData[attackerId].name;
+                const targetName = targetData.name;
+                news.push(`${attackerName} failed raiding ${getResourceIcon(resource)} from ${targetName} - not enough ${getResourceIcon('greenPoison')}`);
+                raidResults.push({
+                  day: currentDay,
+                  attacker_id: attackerId,
+                  attacker_name: attackerName,
+                  target_id: targetId,
+                  target_name: targetName,
+                  resource,
+                  amount: 0,
+                  success: false
                 });
+              });
+              
+              // If no valid attackers, we're done with this raid group
+              if (validAttackers.length === 0) {
                 return;
               }
               
@@ -554,7 +576,7 @@ app.post('/process-day', (req, res) => {
               
               // Calculate loot
               const targetStock = targetData.stockpiles[resource] || 0;
-              const totalLootDemanded = 4 * validAttackers.length;
+              const totalLootDemanded = 2 * validAttackers.length;
               const actualLoot = Math.min(totalLootDemanded, targetStock);
               const lootPerRaider = Math.floor(actualLoot / validAttackers.length);
               const lootRemainder = actualLoot % validAttackers.length;
@@ -592,7 +614,6 @@ app.post('/process-day', (req, res) => {
           });
 
           // STEP 3: Calculate new market prices based on tonight's mining
-          console.log('Step 3: Market Calculation');
 
           // Reset to base prices first
           const newPrices = { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
@@ -624,10 +645,7 @@ app.post('/process-day', (req, res) => {
             newPrices[resource] = Math.round(price);
           });
 
-          console.log('New market prices:', newPrices);
-
           // STEP 4: Process sales at NEW market prices
-          console.log('Step 4: Sales Processing');
           const playerSalesData = {}; // Track sales per player
 
           players.forEach(player => {
@@ -752,7 +770,6 @@ app.post('/process-day', (req, res) => {
                     if (err) {
                       console.error('Error clearing decisions:', err);
                     }
-                    console.log('Day processing complete! News items:', news.length);
                     res.json({ 
                       success: true, 
                       message: 'Day processed successfully!',

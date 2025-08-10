@@ -30,6 +30,24 @@
       animation: glow 2s ease-in-out infinite alternate;
     }
     
+    .logo-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    
+    .game-logo {
+      max-width: 400px;
+      width: 100%;
+      height: auto;
+      filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.3));
+      animation: logoGlow 2s ease-in-out infinite alternate;
+    }
+    
+    @keyframes logoGlow {
+      from { filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.3)); }
+      to { filter: drop-shadow(0 0 30px rgba(255, 0, 255, 0.5)); }
+    }
+    
     @keyframes glow {
       from { text-shadow: 0 0 20px rgba(0, 255, 255, 0.3); }
       to { text-shadow: 0 0 30px rgba(255, 0, 255, 0.5); }
@@ -108,6 +126,10 @@
       h1 {
         font-size: 2rem;
         margin-bottom: 15px;
+      }
+      
+      .game-logo {
+        max-width: 280px;
       }
       
       .tribe-header {
@@ -205,16 +227,16 @@
     .robots-container {
       display: flex;
       justify-content: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 10px;
+      flex-wrap: nowrap;
+      gap: 4px;
+      margin: 15px 0;
     }
     
     .robot {
-      font-size: 2rem;
+      font-size: 1.5rem;
       transition: all 0.3s ease;
       cursor: default;
-      filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));
+      filter: drop-shadow(0 0 8px rgba(0, 255, 255, 0.5));
     }
     
     .robot.assigned {
@@ -635,6 +657,7 @@
       padding: 15px;
       margin-bottom: 20px;
       font-family: 'Orbitron', monospace;
+      text-align: center;
     }
 
     .player-status-grid {
@@ -642,6 +665,7 @@
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 10px;
       margin-top: 10px;
+      justify-items: center;
     }
 
     .player-status {
@@ -671,7 +695,9 @@
 </head>
 <body>
   <div class="container fade-in">
-    <h1>🚀 SPACE TRIBE COMMAND & DECISIONS 🚀</h1>
+    <div class="logo-container">
+      <img src="spacetribeslogo2.png" alt="Space Tribes" class="game-logo">
+    </div>
     <div class="tribe-header">
       <span id="playerIcon">🐻</span>
       <span id="tribeName">Tribe of Endor</span>
@@ -775,21 +801,18 @@
       </div>
     </div>
 
-    <!-- Robot Fleet Display -->
-    <div class="robot-fleet">
-      <h3>🤖 MINING ROBOT FLEET 🤖</h3>
-      <div class="robots-container" id="robotsContainer"></div>
-    </div>
-
     <!-- Mining Decisions -->
     <div class="decision-section">
       <h2>⛏️ Deploy Mining Robots</h2>
       <p>Assign your mining robots to extract resources. Each robot mines 1 unit per turn.</p>
       
+      <!-- Compact Robot Display -->
+      <div class="robots-container" id="robotsContainer"></div>
+      
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">💎</span>
-          <span>💎 $20</span>
+          <span>$20</span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustEffort('whiteDiamonds', -1)">➖</button>
@@ -801,7 +824,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🔻</span>
-          <span>🔻 $15</span>
+          <span>$15</span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustEffort('redRubies', -1)">➖</button>
@@ -813,7 +836,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🔷</span>
-          <span>🔷 $12</span>
+          <span>$12</span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustEffort('blueGems', -1)">➖</button>
@@ -825,7 +848,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🌱</span>
-          <span>🌱 $10</span>
+          <span>$10</span>
         </div>
         <div class="sell-controls">
           <button type="button" onclick="adjustEffort('greenPoison', -1)">➖</button>
@@ -893,7 +916,7 @@
     <!-- Raid Decisions -->
     <div class="decision-section raid-section">
       <h2>⚔️ Raid Operations</h2>
-      <p>Spend 2 Green Poison to attempt stealing 4 resources from another player. Your stolen resources are protected until tomorrow!</p>
+      <p>Spend 2 Green Poison to attempt stealing 2 resources from another player. Your stolen resources are protected until tomorrow!</p>
       
       <div class="raid-controls">
         <div class="raid-dropdown">
@@ -916,7 +939,7 @@
       </div>
       
       <div class="dice-section" id="diceSection" style="display: none;">
-        <h4 style="color: #00ffff; margin-bottom: 10px;">🎲 Roll 3+ to Raid</h4>
+        <h4 style="color: #00ffff; margin-bottom: 10px;">🎲 Roll 2+ to Raid</h4>
         <div class="dice-container">
           <div class="dice" id="dice">?</div>
           <button class="roll-btn" id="rollBtn" onclick="rollDice()">Roll</button>
@@ -1344,7 +1367,7 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
           showMessage('⚠️ You must roll the dice before submitting a raid!', 'error');
           return;
         }
-        if (rollResult < 3) {
+        if (rollResult < 2) {
           showMessage('💀 Your dice roll failed! Raid will not be attempted.', 'error');
           // Set raid to none since it failed
           document.getElementById('raidTarget').value = 'none';
@@ -1357,8 +1380,8 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
         playerId,
         efforts: robotAssignments,
         sales: sellAssignments,
-        raidTarget: rollResult >= 3 ? (raidTarget === 'none' ? null : raidTarget) : null,
-        raidMaterial: rollResult >= 3 ? raidMaterial : null
+        raidTarget: rollResult >= 2 ? (raidTarget === 'none' ? null : raidTarget) : null,
+        raidMaterial: rollResult >= 2 ? raidMaterial : null
       };
 
       fetch('/submit-decisions', {
@@ -1582,7 +1605,7 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
         dice.textContent = roll;
         dice.classList.remove('rolling');
         
-        if (roll >= 3) {
+        if (roll >= 2) {
           resultDiv.textContent = '✅ Successful Raid!';
           resultDiv.className = 'roll-result success';
         } else {
