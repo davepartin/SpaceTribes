@@ -51,26 +51,14 @@ function generateColonyNeeds() {
   return colonyNeeds;
 }
 
-// Practice Mode Configuration
-const PRACTICE_MODE = true;
-const PRACTICE_MODE_PLAYER = 'Dave';
-
-// Simple AI behavior for practice mode
-function generateSimpleAIDecisions(playerName) {
-  const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
-  
-  // AI players always do the same thing: mine 1 random resource, sell 1 random resource
-  const randomMineResource = resources[Math.floor(Math.random() * resources.length)];
-  const randomSellResource = resources[Math.floor(Math.random() * resources.length)];
-  
-  return {
-    efforts: { [randomMineResource]: 1 },
-    sales: { [randomSellResource]: 1 },
-    raidTarget: 'none',
-    raidMaterial: 'none',
-    blockTarget: 'none'
-  };
-}
+// Game Configuration - 6 players, passive income for inactive players
+const GAME_PLAYERS = 6;
+const PASSIVE_INCOME = {
+  whiteDiamonds: 2,
+  redRubies: 2, 
+  blueGems: 2,
+  greenPoison: 2
+};
 
 // Helper function to add categorized news
 function addGeneralNews(day, message, priority = 1) {
@@ -489,6 +477,29 @@ db.serialize(() => {
     }
   });
 
+  // Function to create initial 6 players for the game
+  function createInitialPlayers() {
+    const initialPlayers = [
+      { name: 'Dave', race: 'Tribe of Endor', pin: '1234' },
+      { name: 'Silas', race: 'Tribe of Siluria', pin: '1234' },
+      { name: 'Chris', race: 'Tribe of Elantris', pin: '1234' },
+      { name: 'Brian', race: 'Tribe of Psychlos', pin: '1234' },
+      { name: 'Joel', race: 'Tribe of Leojia', pin: '1234' },
+      { name: 'Curtis', race: 'Tribe of Momma Say', pin: '1234' }
+    ];
+
+    initialPlayers.forEach(player => {
+      db.run('INSERT OR IGNORE INTO players (name, race, pin) VALUES (?, ?, ?)', 
+        [player.name, player.race, player.pin], (err) => {
+        if (err) {
+          console.error(`Error creating player ${player.name}:`, err.message);
+        } else {
+          console.log(`✅ Player ${player.name} ready for game`);
+        }
+      });
+    });
+  }
+
   // Update game_state initialization
   db.run(`
     UPDATE game_state SET 
@@ -497,6 +508,9 @@ db.serialize(() => {
       daily_sales_totals = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'
     WHERE id = 1
   `);
+
+  // Create initial 6 players if they don't exist
+  createInitialPlayers();
 });
 
 // Login endpoint - fixed to accept name instead of race
@@ -589,29 +603,8 @@ app.post('/process-day', (req, res) => {
           return res.json({ error: 'Failed to get decisions' });
         }
 
-        // In practice mode, generate AI decisions for non-Dave players
-        if (PRACTICE_MODE) {
-          console.log('🤖 Practice mode active - generating AI decisions for non-Dave players');
-          
-          players.forEach(player => {
-            if (player.name !== PRACTICE_MODE_PLAYER) {
-              const aiDecisions = generateSimpleAIDecisions(player.name);
-              
-              // Add AI decisions to the decisions array
-              decisions.push({
-                playerId: player.id,
-                day: currentDay,
-                efforts: JSON.stringify(aiDecisions.efforts),
-                sales: JSON.stringify(aiDecisions.sales),
-                raidTarget: aiDecisions.raidTarget,
-                raidMaterial: aiDecisions.raidMaterial,
-                blockTarget: aiDecisions.blockTarget
-              });
-              
-              console.log(`🤖 ${player.name} AI decisions: Mine ${Object.keys(aiDecisions.efforts)[0]}, Sell ${Object.keys(aiDecisions.sales)[0]}`);
-            }
-          });
-        }
+        // All players are human players - no AI decisions needed
+        console.log(`🎮 Processing day ${currentDay} for ${players.length} human players`);
 
         // Process the day using core logic
         processCoreDayLogic(currentDay, players, decisions, (err, result) => {
