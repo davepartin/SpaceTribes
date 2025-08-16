@@ -1003,6 +1003,86 @@ app.get('/game-data/:playerId', (req, res) => {
   });
 });
 
+// Get all players status for real-time dashboard
+app.get('/players-status', (req, res) => {
+  db.all('SELECT * FROM players ORDER BY name', [], (err, players) => {
+    if (err) {
+      console.error('Players status query error:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ error: 'Failed to get players status' });
+    }
+
+    // Get current day
+    db.get('SELECT current_day FROM game_state WHERE id = 1', [], (err, gameState) => {
+      if (err || !gameState) {
+        return res.json({ error: 'Failed to get game state' });
+      }
+
+      const currentDay = gameState.current_day;
+      
+      // Get decisions for current day
+      db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, decisions) => {
+        if (err) {
+          decisions = [];
+        }
+
+        const decisionMap = {};
+        decisions.forEach(d => {
+          decisionMap[d.playerId] = d;
+        });
+
+        // Build status for each player
+        const playersStatus = players.map(player => {
+          const hasSubmitted = decisionMap[player.id] ? true : false;
+          const decision = decisionMap[player.id];
+          
+          let status = '🟡 Waiting';
+          let details = 'No decisions submitted';
+          
+          if (hasSubmitted) {
+            status = '✅ Active';
+            const efforts = decision.efforts ? JSON.parse(decision.efforts) : {};
+            const sales = decision.sales ? JSON.parse(decision.sales) : {};
+            
+            const totalEffort = Object.values(efforts).reduce((sum, val) => sum + (val || 0), 0);
+            const totalSales = Object.values(sales).reduce((sum, val) => sum + (val || 0), 0);
+            
+            details = `${totalEffort} robots, ${totalSales} sales`;
+            
+            if (decision.raidTarget && decision.raidTarget !== 'none') {
+              details += `, 🚀 raiding ${decision.raidTarget}`;
+            }
+            if (decision.blockTarget && decision.blockTarget !== 'none') {
+              details += `, 🛡️ blocking ${decision.blockTarget}`;
+            }
+          }
+
+          return {
+            id: player.id,
+            name: player.name,
+            race: player.race,
+            credits: player.credits,
+            stockpiles: JSON.parse(player.stockpiles),
+            status: status,
+            details: details,
+            hasSubmitted: hasSubmitted,
+            lastActive: player.last_active || 'Never'
+          };
+        });
+
+        res.json({
+          currentDay: currentDay,
+          totalPlayers: players.length,
+          submittedCount: decisions.length,
+          players: playersStatus
+        });
+      });
+    });
+  });
+});
+
 // Get decisions for a specific day
 app.get('/decisions/:day', (req, res) => {
   const day = parseInt(req.params.day);

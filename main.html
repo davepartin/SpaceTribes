@@ -394,6 +394,156 @@
       background: rgba(255, 0, 0, 0.05);
       border: 2px solid rgba(255, 0, 0, 0.3);
     }
+
+    /* Player Status Dashboard Styles */
+    .players-dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .player-status-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .player-status-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(0, 255, 255, 0.5);
+      box-shadow: 0 8px 25px rgba(0, 255, 255, 0.2);
+    }
+
+    .player-status-card.active {
+      border-color: #00ff00;
+      background: rgba(0, 255, 0, 0.1);
+    }
+
+    .player-status-card.waiting {
+      border-color: #ffff00;
+      background: rgba(255, 255, 0, 0.1);
+    }
+
+    .player-status-card.inactive {
+      border-color: #ff6666;
+      background: rgba(255, 0, 0, 0.1);
+    }
+
+    .player-header-info {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .player-name {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #00ffff;
+    }
+
+    .player-race {
+      font-size: 0.9rem;
+      color: #cccccc;
+      font-style: italic;
+    }
+
+    .player-status {
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 5px 12px;
+      border-radius: 20px;
+      text-align: center;
+    }
+
+    .player-status.active {
+      background: rgba(0, 255, 0, 0.2);
+      color: #00ff00;
+      border: 1px solid #00ff00;
+    }
+
+    .player-status.waiting {
+      background: rgba(255, 255, 0, 0.2);
+      color: #ffff00;
+      border: 1px solid #ffff00;
+    }
+
+    .player-status.inactive {
+      background: rgba(255, 0, 0, 0.2);
+      color: #ff6666;
+      border: 1px solid #ff6666;
+    }
+
+    .player-details {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .player-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    .stat-label {
+      color: #cccccc;
+      min-width: 60px;
+    }
+
+    .stat-value {
+      color: #00ffff;
+      font-weight: bold;
+    }
+
+    .player-activity {
+      font-size: 0.9rem;
+      color: #ffff00;
+      text-align: center;
+      padding: 8px;
+      background: rgba(255, 255, 0, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 0, 0.3);
+    }
+
+    .loading-status {
+      text-align: center;
+      color: #cccccc;
+      font-style: italic;
+      padding: 20px;
+    }
+
+    .refresh-btn {
+      background: linear-gradient(135deg, #00ffff, #00ccff);
+      color: #222;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 25px;
+      font-family: 'Orbitron', monospace;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0, 255, 255, 0.3);
+    }
+
+    .refresh-btn:hover {
+      background: linear-gradient(135deg, #ff00ff, #00ffff);
+      color: #fff;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 255, 255, 0.4);
+    }
     
     select, .raid-target {
       background: rgba(255, 255, 255, 0.1);
@@ -1176,6 +1326,21 @@
             <div class="winner-credits">
               Final Score: $<span id="winnerCredits">0</span>
             </div>
+          </div>
+        </div>
+
+        <!-- Player Status Dashboard -->
+        <div class="decision-section">
+          <h2>👥 Player Status Dashboard - Day <span id="dashboardDay">?</span></h2>
+          <p>Real-time status of all 6 players. Green = Active, Yellow = Waiting, Red = Inactive</p>
+          
+          <div style="text-align: center; margin-bottom: 20px;">
+            <button onclick="loadPlayerStatus()" class="refresh-btn">🔄 Refresh Player Status</button>
+          </div>
+          
+          <div class="players-dashboard" id="playersDashboard">
+            <!-- Player status buttons will be inserted here by JavaScript -->
+            <div class="loading-status">Loading player status...</div>
           </div>
         </div>
 
@@ -2173,6 +2338,117 @@
             updateSubmitButton(); // NEW: Update the submit button state
             updateAdminSection(); // NEW: Update the admin section visibility
             updateButtonStates(); // NEW: Update the state of +/- buttons
+            updatePlayerStatusDashboard(); // NEW: Update the player status dashboard
+        }
+
+        // Update player status dashboard
+        function updatePlayerStatusDashboard() {
+          // Update dashboard day
+          const dashboardDayElement = document.getElementById('dashboardDay');
+          if (dashboardDayElement && gameData?.gameState?.currentDay) {
+            dashboardDayElement.textContent = gameData.gameState.currentDay;
+          }
+
+          // Load player status from server
+          loadPlayerStatus();
+        }
+
+        // Load and display player status
+        function loadPlayerStatus() {
+          fetch('/players-status')
+            .then(res => res.json())
+            .then(data => {
+              if (data.error) {
+                console.error('Failed to load player status:', data.error);
+                return;
+              }
+              
+              displayPlayerStatus(data);
+            })
+            .catch(err => {
+              console.error('Error loading player status:', err);
+            });
+        }
+
+        // Display player status in the dashboard
+        function displayPlayerStatus(data) {
+          const dashboard = document.getElementById('playersDashboard');
+          if (!dashboard) return;
+
+          dashboard.innerHTML = '';
+
+          data.players.forEach(player => {
+            const card = document.createElement('div');
+            card.className = `player-status-card ${player.hasSubmitted ? 'active' : 'waiting'}`;
+            
+            const statusClass = player.hasSubmitted ? 'active' : 'waiting';
+            const statusText = player.hasSubmitted ? '✅ Active' : '🟡 Waiting';
+            
+            card.innerHTML = `
+              <div class="player-header-info">
+                <div>
+                  <div class="player-name">${player.name}</div>
+                  <div class="player-race">${player.race}</div>
+                </div>
+                <div class="player-status ${statusClass}">${statusText}</div>
+              </div>
+              
+              <div class="player-details">
+                <div class="player-stats">
+                  <div class="stat-item">
+                    <span class="stat-label">Credits:</span>
+                    <span class="stat-value">$${player.credits}</span>
+                  </div>
+                  <div class="stat-item">
+                    <span class="stat-label">Resources:</span>
+                    <span class="stat-value">${Object.values(player.stockpiles).reduce((sum, val) => sum + val, 0)}</span>
+                  </div>
+                </div>
+                
+                <div class="player-activity">
+                  ${player.details}
+                </div>
+              </div>
+            `;
+
+            // Add click event to show more details
+            card.addEventListener('click', () => {
+              showPlayerDetails(player);
+            });
+
+            dashboard.appendChild(card);
+          });
+
+          // Update submission count in game status
+          const submittedCountElement = document.getElementById('submittedCount');
+          if (submittedCountElement) {
+            submittedCountElement.textContent = data.submittedCount;
+          }
+          
+          const activePlayerCountElement = document.getElementById('activePlayerCount');
+          if (activePlayerCountElement) {
+            activePlayerCountElement.textContent = data.totalPlayers;
+          }
+        }
+
+        // Show detailed player information
+        function showPlayerDetails(player) {
+          const details = `
+            🎯 ${player.name} (${player.race})
+            
+            💰 Credits: $${player.credits}
+            
+            📦 Stockpiles:
+            💎 White Diamonds: ${player.stockpiles.whiteDiamonds || 0}
+            🔻 Red Rubies: ${player.stockpiles.redRubies || 0}
+            🔷 Blue Gems: ${player.stockpiles.blueGems || 0}
+            🌱 Green Poison: ${player.stockpiles.greenPoison || 0}
+            
+            📊 Status: ${player.status}
+            📝 Details: ${player.details}
+          `;
+          
+          alert(details);
         }
 
         // Update game status display
