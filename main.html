@@ -1953,8 +1953,8 @@
               });
             }
 
-            // Update stockpiles display for selling decisions
-            if (gameData.leaderboard) {
+            // Update stockpiles display for selling decisions - DISABLED FOR PRACTICE MODE
+            if (gameData.leaderboard && Array.isArray(gameData.leaderboard)) {
           const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
               resources.forEach(resource => {
                 let stockpileText = '';
@@ -2019,7 +2019,7 @@
 
             // Update leaderboard
             const leaderboardBody = document.getElementById('leaderboardBody');
-            if (leaderboardBody) { // Add null check
+            if (leaderboardBody && gameData.leaderboard && Array.isArray(gameData.leaderboard)) { // Add null check
                 leaderboardBody.innerHTML = '';
         gameData.leaderboard.forEach(player => {
           const row = document.createElement('tr');
@@ -2039,7 +2039,7 @@
 
             // Populate raid target dropdown
             const raidTargetSelect = document.getElementById('raidTarget');
-            if (raidTargetSelect) { // Add null check
+            if (raidTargetSelect && gameData.leaderboard && Array.isArray(gameData.leaderboard)) { // Add null check
                 raidTargetSelect.innerHTML = '<option value="none">None</option>';
                 gameData.leaderboard.forEach(player => {
 
