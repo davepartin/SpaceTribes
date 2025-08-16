@@ -2123,7 +2123,7 @@
 
             // Populate block targets (same as raid targets)
             const blockTarget = document.getElementById('blockTarget');
-            if (blockTarget) {
+            if (blockTarget && gameData.leaderboard && Array.isArray(gameData.leaderboard)) {
               blockTarget.innerHTML = '<option value="none">None</option>';
         gameData.leaderboard.forEach(player => {
           if (player.name !== gameData.playerName) {
