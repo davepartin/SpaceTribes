@@ -1845,22 +1845,28 @@
 
         // New function to update the submit button state
         function updateSubmitButton() {
-        const submitBtn = document.getElementById('submitBtn');
+            const submitBtn = document.getElementById('submitBtn');
             const submitDaySpan = document.getElementById('submitDayNumber');
             
             if (!submitBtn || !gameData) return;
             
-        const currentDay = gameData.gameState?.currentDay || '?';
+            const currentDay = gameData.gameState?.currentDay || '?';
             if (submitDaySpan) submitDaySpan.textContent = currentDay;
             
-        if (gameData.hasSubmitted) {
+            // Check if player has already submitted decisions for this day
+            // For now, we'll assume they haven't submitted (since we don't track this yet)
+            const hasSubmitted = false; // TODO: Implement submission tracking
+            
+            if (hasSubmitted) {
                 submitBtn.innerHTML = `✅ DECISIONS SUBMITTED FOR DAY ${currentDay} ✅`;
-          submitBtn.style.background = 'linear-gradient(135deg, #666, #888)';
+                submitBtn.style.background = 'linear-gradient(135deg, #666, #888)';
                 submitBtn.style.color = '#ccc';
-        } else {
+                submitBtn.disabled = true;
+            } else {
                 submitBtn.innerHTML = `🚀 SUBMIT DECISIONS FOR DAY ${currentDay} 🚀`;
-          submitBtn.style.background = 'linear-gradient(135deg, #00ff00, #00cc00)';
+                submitBtn.style.background = 'linear-gradient(135deg, #00ff00, #00cc00)';
                 submitBtn.style.color = '#000';
+                submitBtn.disabled = false;
             }
         }
 
@@ -1868,12 +1874,9 @@
         function updateAdminSection() {
             const adminSection = document.getElementById('adminSection'); // Changed to getElementById
             if (adminSection) {
-                // Example: Only show admin section for 'Dave'
-                if (gameData.player?.name === 'Dave') {
-                    adminSection.style.display = 'block';
-                } else {
-                    adminSection.style.display = 'none';
-                }
+                // Show admin section for all players during development/testing
+                // TODO: Restrict to specific players in production
+                adminSection.style.display = 'block';
             }
         }
 
@@ -2261,12 +2264,16 @@
                 }
                 throw new Error(data.error);
               }
+              
+              // Debug: Log the actual data structure
+              console.log('Game data received:', data);
+              
               gameData = data;
               updateUI(gameData); // Pass gameData to updateUI
               updateGameStatus(); // Add this line
               
               // Check for game end
-              if (data.gameStatus.isGameEnded && data.gameStatus.winner) { // Use gameStatus.isGameEnded
+              if (data.gameStatus && data.gameStatus.isGameEnded && data.gameStatus.winner) { // Use gameStatus.isGameEnded
                 setTimeout(() => showGameEndModal(data.gameStatus), 1000); // Pass gameStatus which contains winner/finalStandings
         }
       })
