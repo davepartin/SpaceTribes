@@ -157,11 +157,11 @@
         margin-right: 8px;
       }
       
-      .sell-controls {
+      .sell-controls, .mining-controls {
         gap: 6px;
       }
       
-      .sell-controls button {
+      .sell-controls button, .mining-controls button {
         width: 32px;
         height: 32px;
         font-size: 1.3rem;
@@ -282,13 +282,13 @@
       flex: 1;
     }
     
-    .sell-controls {
+    .sell-controls, .mining-controls {
       display: flex;
       align-items: center;
       gap: 8px;
     }
     
-    .sell-controls button {
+    .sell-controls button, .mining-controls button {
       width: 38px;
       height: 38px;
       border-radius: 50%;
@@ -305,12 +305,12 @@
       user-select: none;
     }
     
-    .sell-controls button:hover {
+    .sell-controls button:hover, .mining-controls button:hover {
       background: linear-gradient(135deg, #ff00ff, #00ffff);
       color: #fff;
     }
     
-    .sell-controls button:disabled {
+    .sell-controls button:disabled, .mining-controls button:disabled {
       background: #333;
       color: #666;
       cursor: not-allowed;
@@ -486,7 +486,7 @@
       font-weight: bold;
     }
 
-    .total-earned {
+    .total-earned, .total-credits {
       color: #00ff00;
     }
 
@@ -772,6 +772,16 @@
         </section>
 
         <section>
+          <h2>📈 Yesterday's Final Prices</h2>
+          <ul id="yesterdayPrices">
+            <li>💎 Diamonds: $<span id="yesterday-whiteDiamonds">0</span></li>
+            <li>🔻 Rubies: $<span id="yesterday-redRubies">0</span></li>
+            <li>🔷 Gems: $<span id="yesterday-blueGems">0</span></li>
+            <li>🌱 Poison: $<span id="yesterday-greenPoison">0</span></li>
+          </ul>
+        </section>
+
+        <section>
           <h2>🌍 Total Colony Mining</h2>
           <ul id="colonyMining"></ul>
         </section>
@@ -812,9 +822,9 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">💎</span>
-          <span>$20</span>
+          <span>Next Price: $<span id="mining-price-whiteDiamonds">20</span></span>
         </div>
-        <div class="sell-controls">
+        <div class="mining-controls">
           <button type="button" onclick="adjustEffort('whiteDiamonds', -1)">➖</button>
           <span class="count-display" id="effortCount-whiteDiamonds">0</span>
           <button type="button" onclick="adjustEffort('whiteDiamonds', 1)">➕</button>
@@ -824,9 +834,9 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🔻</span>
-          <span>$15</span>
+          <span>Next Price: $<span id="mining-price-redRubies">15</span></span>
         </div>
-        <div class="sell-controls">
+        <div class="mining-controls">
           <button type="button" onclick="adjustEffort('redRubies', -1)">➖</button>
           <span class="count-display" id="effortCount-redRubies">0</span>
           <button type="button" onclick="adjustEffort('redRubies', 1)">➕</button>
@@ -836,9 +846,9 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🔷</span>
-          <span>$12</span>
+          <span>Next Price: $<span id="mining-price-blueGems">12</span></span>
         </div>
-        <div class="sell-controls">
+        <div class="mining-controls">
           <button type="button" onclick="adjustEffort('blueGems', -1)">➖</button>
           <span class="count-display" id="effortCount-blueGems">0</span>
           <button type="button" onclick="adjustEffort('blueGems', 1)">➕</button>
@@ -848,9 +858,9 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🌱</span>
-          <span>$10</span>
+          <span>Next Price: $<span id="mining-price-greenPoison">10</span></span>
         </div>
-        <div class="sell-controls">
+        <div class="mining-controls">
           <button type="button" onclick="adjustEffort('greenPoison', -1)">➖</button>
           <span class="count-display" id="effortCount-greenPoison">0</span>
           <button type="button" onclick="adjustEffort('greenPoison', 1)">➕</button>
@@ -867,6 +877,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">💎</span>
+          <span>Need: <span id="need-whiteDiamonds" style="color: #ffff00;">15</span></span>
           <span>💎 Qty: <span id="available-whiteDiamonds">0</span></span>
         </div>
         <div class="sell-controls">
@@ -879,6 +890,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🔻</span>
+          <span>Need: <span id="need-redRubies" style="color: #ffff00;">15</span></span>
           <span>🔻 Qty: <span id="available-redRubies">0</span></span>
         </div>
         <div class="sell-controls">
@@ -891,6 +903,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🔷</span>
+          <span>Need: <span id="need-blueGems" style="color: #ffff00;">15</span></span>
           <span>🔷 Qty: <span id="available-blueGems">0</span></span>
         </div>
         <div class="sell-controls">
@@ -903,6 +916,7 @@
       <div class="material-row">
         <div class="material-info">
           <span class="material-icon">🌱</span>
+          <span>Need: <span id="need-greenPoison" style="color: #ffff00;">15</span></span>
           <span>🌱 Qty: <span id="available-greenPoison">0</span></span>
         </div>
         <div class="sell-controls">
@@ -1296,6 +1310,29 @@ if (robotCountEl) robotCountEl.textContent = 10 - totalAssigned;
           } else {
             adminSection.style.display = 'none';
           }
+        }
+        
+        // Update current prices and colony needs display
+        if (gameData.prices) {
+          document.getElementById('price-whiteDiamonds').textContent = gameData.prices.whiteDiamonds || 20;
+          document.getElementById('price-redRubies').textContent = gameData.prices.redRubies || 15;
+          document.getElementById('price-blueGems').textContent = gameData.prices.blueGems || 12;
+          document.getElementById('price-greenPoison').textContent = gameData.prices.greenPoison || 10;
+        }
+
+        if (gameData.currentColonyNeeds) {
+          document.getElementById('need-whiteDiamonds').textContent = gameData.currentColonyNeeds.whiteDiamonds || 15;
+          document.getElementById('need-redRubies').textContent = gameData.currentColonyNeeds.redRubies || 15;
+          document.getElementById('need-blueGems').textContent = gameData.currentColonyNeeds.blueGems || 15;
+          document.getElementById('need-greenPoison').textContent = gameData.currentColonyNeeds.greenPoison || 15;
+        }
+
+        // Update yesterday's prices display
+        if (gameData.lastDayPrices) {
+          document.getElementById('yesterday-whiteDiamonds').textContent = gameData.lastDayPrices.whiteDiamonds || 0;
+          document.getElementById('yesterday-redRubies').textContent = gameData.lastDayPrices.redRubies || 0;
+          document.getElementById('yesterday-blueGems').textContent = gameData.lastDayPrices.blueGems || 0;
+          document.getElementById('yesterday-greenPoison').textContent = gameData.lastDayPrices.greenPoison || 0;
         }
         
         updatePlayerStatus();

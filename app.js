@@ -6,6 +6,10 @@ const path = require('path');
 const app = express();
 const db = new sqlite3.Database('./spacetribes.db');
 
+// Game Configuration
+const PRACTICE_MODE = true; // Set to false to disable AI tribes
+const PRACTICE_MODE_PLAYER = 'Dave'; // Only this player gets AI opponents
+
 app.use(bodyParser.json());
 app.use(express.static('.'));
 
@@ -18,6 +22,90 @@ function getResourceIcon(resource) {
     case 'greenPoison': return '🌱';
     default: return '';
   }
+}
+
+// Add this function in app.js after helper functions
+function generateColonyNeeds() {
+  // 10-day cycle that balances to 150 total per resource over 10 days
+  const colonyNeeds = [
+    {day: 1, whiteDiamonds: 18, redRubies: 12, blueGems: 15, greenPoison: 15}, // 60 total
+    {day: 2, whiteDiamonds: 12, redRubies: 18, blueGems: 15, greenPoison: 15}, // 60 total  
+    {day: 3, whiteDiamonds: 15, redRubies: 15, blueGems: 18, greenPoison: 12}, // 60 total
+    {day: 4, whiteDiamonds: 15, redRubies: 15, blueGems: 12, greenPoison: 18}, // 60 total
+    {day: 5, whiteDiamonds: 16, redRubies: 14, blueGems: 16, greenPoison: 14}, // 60 total
+    {day: 6, whiteDiamonds: 14, redRubies: 16, blueGems: 14, greenPoison: 16}, // 60 total
+    {day: 7, whiteDiamonds: 17, redRubies: 13, blueGems: 17, greenPoison: 13}, // 60 total
+    {day: 8, whiteDiamonds: 13, redRubies: 17, blueGems: 13, greenPoison: 17}, // 60 total
+    {day: 9, whiteDiamonds: 15, redRubies: 15, blueGems: 15, greenPoison: 15}, // 60 total
+    {day: 10, whiteDiamonds: 15, redRubies: 15, blueGems: 15, greenPoison: 15} // 60 total
+  ];
+  return colonyNeeds;
+}
+
+// Add this function to get current day's needs
+function getCurrentColonyNeeds(currentDay) {
+  const needs = generateColonyNeeds();
+  const dayIndex = ((currentDay - 1) % 10);
+  return needs[dayIndex];
+}
+
+// Simple AI for Practice Mode - Other players just mine 1 resource and sell 1 resource
+function generateSimpleAIDecisions(playerName, stockpiles) {
+  // Simple strategy: mine 1 resource, sell 1 resource, never raid
+  const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
+  
+  // Pick a random resource to mine (1 robot)
+  const mineResource = resources[Math.floor(Math.random() * resources.length)];
+  const mining = {};
+  resources.forEach(resource => {
+    mining[resource] = resource === mineResource ? 1 : 0;
+  });
+  
+  // Pick a random resource to sell (1 unit if available)
+  const sellResource = resources[Math.floor(Math.random() * resources.length)];
+  const selling = {};
+  resources.forEach(resource => {
+    const available = stockpiles[resource] || 0;
+    selling[resource] = (resource === sellResource && available > 0) ? 1 : 0;
+  });
+  
+  return {
+    efforts: mining,
+    sales: selling,
+    raidTarget: 'none',
+    raidMaterial: null
+  };
+}
+
+// Replace the market price calculation in process-day endpoint
+function calculateSellingBasedPrices(dailySalesTotals, colonyNeeds, currentPrices) {
+  const newPrices = {};
+  const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
+  
+  resources.forEach(resource => {
+    const totalSold = dailySalesTotals[resource] || 0;
+    const needed = colonyNeeds[resource] || 15;
+    const currentPrice = currentPrices[resource] || 10;
+    
+    let sellRatio = totalSold / needed;
+    let priceMultiplier = 1.0;
+    
+    if (sellRatio >= 1.5) {
+      priceMultiplier = 0.6; // -40% (major oversupply)
+    } else if (sellRatio >= 1.2) {
+      priceMultiplier = 0.8; // -20% (moderate oversupply)
+    } else if (sellRatio >= 0.8) {
+      priceMultiplier = 1.0; // No change (balanced)
+    } else if (sellRatio >= 0.5) {
+      priceMultiplier = 1.3; // +30% (undersupply)
+    } else {
+      priceMultiplier = 1.6; // +60% (severe shortage)
+    }
+    
+    newPrices[resource] = Math.round(Math.max(5, Math.min(50, currentPrice * priceMultiplier)));
+  });
+  
+  return newPrices;
 }
 
 // Initialize database tables
@@ -117,6 +205,31 @@ db.serialize(() => {
       console.error('Error adding last_night_earnings column:', err);
     }
   });
+
+  db.run(`ALTER TABLE game_state ADD COLUMN colony_needs_history TEXT DEFAULT '[]'`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding colony_needs_history column:', err);
+    }
+  });
+  db.run(`ALTER TABLE game_state ADD COLUMN price_history TEXT DEFAULT '[]'`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding price_history column:', err);
+    }
+  });
+  db.run(`ALTER TABLE game_state ADD COLUMN daily_sales_totals TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Error adding daily_sales_totals column:', err);
+    }
+  });
+
+  // Update game_state initialization
+  db.run(`
+    UPDATE game_state SET 
+      colony_needs_history = '[{"day":1,"whiteDiamonds":15,"redRubies":15,"blueGems":15,"greenPoison":15}]',
+      price_history = '[{"day":1,"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}]',
+      daily_sales_totals = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'
+    WHERE id = 1
+  `);
 });
 
 // Login endpoint - fixed to accept name instead of race
@@ -178,7 +291,16 @@ app.get('/game-data/:playerId', (req, res) => {
 
     const currentDay = gameState.current_day;
     const prices = JSON.parse(gameState.market_prices);
-    const needs = JSON.parse(gameState.colony_needs);
+    
+    // Get current colony needs for this day
+    const currentColonyNeeds = getCurrentColonyNeeds(currentDay);
+    
+    // Get price history
+    const priceHistory = JSON.parse(gameState.price_history || '[]');
+    const lastDayPrices = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1] : prices;
+    
+    // Get daily sales totals from yesterday
+    const dailySalesTotals = JSON.parse(gameState.daily_sales_totals || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}');
 
     // Get player data
     db.get('SELECT * FROM players WHERE id = ?', [playerId], (err, player) => {
@@ -235,18 +357,7 @@ app.get('/game-data/:playerId', (req, res) => {
                             hasPlayed: p.credits > 100 || Object.values(JSON.parse(p.stockpiles || '{}')).some(v => v > 0)
                           }));
 
-                          // Format leaderboard
-                          const formattedLeaderboard = leaderboard.map(p => ({
-                            id: p.id,
-                            name: p.name,
-                            race: p.race,
-                            credits: p.credits,
-                            stockpiles: p.stockpiles,
-                            hasSubmitted: p.hasSubmitted,
-                            hasPlayed: p.hasPlayed
-                          }));
-
-                          // Calculate available robots
+                          // Calculate total stockpiles
                           const playerStockpiles = JSON.parse(player.stockpiles || '{}');
                           const protectedResources = JSON.parse(player.protected_resources || '{}');
                           const totalStockpiles = {};
@@ -255,38 +366,40 @@ app.get('/game-data/:playerId', (req, res) => {
                             totalStockpiles[resource] = (playerStockpiles[resource] || 0) + (protectedResources[resource] || 0);
                           });
 
-                          // Count active players for this day
-                          db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, decisions) => {
-                            const activePlayers = decisions ? decisions.length : 0;
-                            const lastSupply = JSON.parse(gameState.last_supply || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}');
-                            
-                            // Prepare response
-                            const response = {
-                              currentDay,
-                              playerId: player.id,
-                              playerName: player.name,
-                              playerRace: player.race,
-                              credits: player.credits,
-                              stockpiles: playerStockpiles,
-                              protectedResources: protectedResources,
-                              totalStockpiles: totalStockpiles,
-                              lastEfforts: JSON.parse(player.lastEfforts || '{}'),
-                              prices,
-                              needs,
-                              lastSupply: lastSupply,
-                              activePlayers: activePlayers,
-                              leaderboard: formattedLeaderboard,
-                              news: newsMessages,
-                              efforts: decision ? JSON.parse(decision.efforts || '{}') : {},
-                              sales: decision ? JSON.parse(decision.sales || '{}') : {},
-                              raidTarget: decision ? decision.raidTarget : 'none',
-                              raidMaterial: decision ? decision.raidMaterial : null,
-                              hasSubmitted: !!decision,
-                              lastNightSales: lastNightSales || [],
-                              lastNightEarnings: player.last_night_earnings || 0
-                            };
-                            res.json(response);
-                          });
+                          const activePlayers = todayDecisions ? todayDecisions.length : 0;
+                          const lastSupply = JSON.parse(gameState.last_supply || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}');
+                          
+                          // Prepare response with both old and new data
+                          const response = {
+                            currentDay,
+                            playerId: player.id,
+                            playerName: player.name,
+                            playerRace: player.race,
+                            credits: player.credits,
+                            stockpiles: playerStockpiles,
+                            protectedResources: protectedResources,
+                            totalStockpiles,
+                            lastEfforts: JSON.parse(player.lastEfforts || '{}'),
+                            prices,
+                            needs: currentColonyNeeds, // Replaces old static needs
+                            lastSupply,
+                            activePlayers,
+                            leaderboard,
+                            news: newsMessages,
+                            efforts: decision ? JSON.parse(decision.efforts || '{}') : {},
+                            sales: decision ? JSON.parse(decision.sales || '{}') : {},
+                            raidTarget: decision ? decision.raidTarget : 'none',
+                            raidMaterial: decision ? decision.raidMaterial : null,
+                            hasSubmitted: !!decision,
+                            lastNightSales: lastNightSales || [],
+                            lastNightEarnings: player.last_night_earnings || 0,
+                            // NEW FIELDS
+                            currentColonyNeeds,
+                            lastDayPrices,
+                            dailySalesTotals,
+                            priceHistory
+                          };
+                          res.json(response);
                         });
                       }
                     );
@@ -457,39 +570,109 @@ app.post('/process-day', (req, res) => {
             const hasSubmitted = decisionMap[player.id] && Object.keys(decisionMap[player.id].efforts).length > 0;
             
             if (!hasSubmitted) {
-              // Player didn't submit decisions - give them default resources
-              
-              // Add auto-assigned resources
-              pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
-              pdata.stockpiles.blueGems = (pdata.stockpiles.blueGems || 0) + 1;
-              pdata.stockpiles.redRubies = (pdata.stockpiles.redRubies || 0) + 1;
-              pdata.stockpiles.greenPoison = (pdata.stockpiles.greenPoison || 0) + 1;
-              
-              // Update their lastEfforts to show what they "mined"
-              pdata.lastEfforts = {
-                whiteDiamonds: 2,
-                redRubies: 1,
-                blueGems: 1,
-                greenPoison: 1
-              };
-              
-              // Add to total supply for market calculations
-              totalSupply.whiteDiamonds += 2;
-              totalSupply.redRubies += 1;
-              totalSupply.blueGems += 1;
-              totalSupply.greenPoison += 1;
-              
-              // Add news message
-              news.push(`${player.name} was auto-assigned: 2💎 1🔻 1🔷 1🌱 (absent)`);
+              // Generate AI decisions for non-Dave players in practice mode
+              if (PRACTICE_MODE && player.name !== PRACTICE_MODE_PLAYER) {
+                const aiDecisions = generateSimpleAIDecisions(player.name, pdata.stockpiles);
+                
+                if (aiDecisions) {
+                  // Apply AI mining decisions
+                  Object.keys(aiDecisions.efforts).forEach(resource => {
+                    const mined = aiDecisions.efforts[resource] || 0;
+                    pdata.stockpiles[resource] = (pdata.stockpiles[resource] || 0) + mined;
+                    totalSupply[resource] += mined;
+                  });
+                  
+                  // Store AI decisions for processing
+                  pdata.lastEfforts = aiDecisions.efforts;
+                  pdata.sales = aiDecisions.sales;
+                  pdata.raidTarget = aiDecisions.raidTarget;
+                  pdata.raidMaterial = aiDecisions.raidMaterial;
+                  
+                  // Add AI decisions to the decisions array so they get processed
+                  decisions.push({
+                    playerId: player.id,
+                    day: currentDay,
+                    efforts: JSON.stringify(aiDecisions.efforts),
+                    sales: JSON.stringify(aiDecisions.sales),
+                    raidTarget: aiDecisions.raidTarget,
+                    raidMaterial: aiDecisions.raidMaterial
+                  });
+                  
+                  // Add news message about AI behavior
+                  const totalMined = Object.values(aiDecisions.efforts).reduce((a, b) => a + b, 0);
+                  news.push(`${player.name} AI: ${totalMined} robot deployed, 1 resource sold`);
+                } else {
+                  // Fallback to simple mining if AI fails
+                  pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
+                  pdata.stockpiles.blueGems = (pdata.stockpiles.blueGems || 0) + 1;
+                  pdata.stockpiles.redRubies = (pdata.stockpiles.redRubies || 0) + 1;
+                  pdata.stockpiles.greenPoison = (pdata.stockpiles.greenPoison || 0) + 1;
+                  
+                  pdata.lastEfforts = {
+                    whiteDiamonds: 2,
+                    redRubies: 1,
+                    blueGems: 1,
+                    greenPoison: 1
+                  };
+                  
+                  totalSupply.whiteDiamonds += 2;
+                  totalSupply.redRubies += 1;
+                  totalSupply.blueGems += 1;
+                  totalSupply.greenPoison += 1;
+                  
+                  news.push(`${player.name} was auto-assigned: 2💎 1🔻 1🔷 1🌱 (fallback)`);
+                }
+              } else if (player.name === PRACTICE_MODE_PLAYER) {
+                // Dave gets simple fallback if no decisions submitted
+                pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
+                pdata.stockpiles.blueGems = (pdata.stockpiles.blueGems || 0) + 1;
+                pdata.stockpiles.redRubies = (pdata.stockpiles.redRubies || 0) + 1;
+                pdata.stockpiles.greenPoison = (pdata.stockpiles.greenPoison || 0) + 1;
+                
+                pdata.lastEfforts = {
+                  whiteDiamonds: 2,
+                  redRubies: 1,
+                  blueGems: 1,
+                  greenPoison: 1
+                };
+                
+                totalSupply.whiteDiamonds += 2;
+                totalSupply.redRubies += 1;
+                totalSupply.blueGems += 1;
+                totalSupply.greenPoison += 1;
+                
+                news.push(`${player.name} was auto-assigned: 2💎 1🔻 1🔷 1🌱 (fallback)`);
+              } else {
+                // Non-practice mode players get simple fallback
+                pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
+                pdata.stockpiles.blueGems = (pdata.stockpiles.blueGems || 0) + 1;
+                pdata.stockpiles.redRubies = (pdata.stockpiles.redRubies || 0) + 1;
+                pdata.stockpiles.greenPoison = (pdata.stockpiles.greenPoison || 0) + 1;
+                
+                pdata.lastEfforts = {
+                  whiteDiamonds: 2,
+                  redRubies: 1,
+                  blueGems: 1,
+                  greenPoison: 1
+                };
+                
+                totalSupply.whiteDiamonds += 2;
+                totalSupply.redRubies += 1;
+                totalSupply.blueGems += 1;
+                totalSupply.greenPoison += 1;
+                
+                news.push(`${player.name} was auto-assigned: 2💎 1🔻 1🔷 1🌱 (normal mode)`);
+              }
             }
           });
+        });
 
-          // 2. Process raids BEFORE sales
-          // For each target/resource, collect all raiders
-          const raidResults = [];
+        // 2. Process raids BEFORE sales
+        // For each target/resource, collect all raiders
+        const raidResults = [];
 
-          // Group raids by target and resource
-          const raidGroups = {};
+        // Group raids by target and resource
+        const raidGroups = {};
           decisions.forEach(d => {
             if (d.raidTarget && d.raidTarget !== 'none' && d.raidMaterial) {
               const target = players.find(p => p.name === d.raidTarget);
@@ -613,39 +796,40 @@ app.post('/process-day', (req, res) => {
             });
           });
 
-          // STEP 3: Calculate new market prices based on tonight's mining
+          // STEP 3: Calculate daily sales totals
+          const dailySalesTotals = { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
 
-          // Reset to base prices first
-          const newPrices = { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
-
-          // Fixed colony needs for 6-player game
-          const colonyNeeds = { whiteDiamonds: 15, redRubies: 15, blueGems: 15, greenPoison: 15 };
-
-          // Apply market adjustments based on supply vs demand
-          Object.keys(newPrices).forEach(resource => {
-            const supply = totalSupply[resource] || 0;
-            const need = colonyNeeds[resource];
-            let price = newPrices[resource];
-            // Removed all market news
-            if (supply >= need && supply <= need * 1.1) {
-              price = Math.min(price * 1.1, 30);
-            } else if (supply < need * 0.5) {
-              price = Math.min(price * 1.5, 50);
-            } else if (supply > need * 1.5) {
-              if (resource === 'whiteDiamonds') {
-                price = Math.max(price * 0.35, 5);
-              } else {
-                price = Math.max(price * 0.5, 5);
-              }
-            } else if (supply < need) {
-              price = Math.min(price * 1.2, 40);
-            } else {
-              price = Math.max(price * 0.8, 8);
-            }
-            newPrices[resource] = Math.round(price);
+          Object.values(playerData).forEach(pdata => {
+            Object.keys(pdata.sales).forEach(resource => {
+              const sellAmount = Math.min(pdata.sales[resource] || 0, pdata.stockpiles[resource] || 0);
+              dailySalesTotals[resource] += sellAmount;
+            });
           });
 
-          // STEP 4: Process sales at NEW market prices
+          // STEP 4: Calculate new prices based on sales (not mining)
+          const currentColonyNeeds = getCurrentColonyNeeds(currentDay);
+          const currentPrices = JSON.parse(state.market_prices);
+          const newPrices = calculateSellingBasedPrices(dailySalesTotals, currentColonyNeeds, currentPrices);
+
+          // STEP 5: Get tomorrow's colony needs
+          const tomorrowColonyNeeds = getCurrentColonyNeeds(currentDay + 1);
+
+          // STEP 6: Update price and colony needs history
+          const priceHistory = JSON.parse(state.price_history || '[]');
+          priceHistory.push({
+            day: currentDay,
+            ...currentPrices
+          });
+          if (priceHistory.length > 10) priceHistory.shift();
+
+          const colonyNeedsHistory = JSON.parse(state.colony_needs_history || '[]');
+          colonyNeedsHistory.push({
+            day: currentDay,
+            ...currentColonyNeeds
+          });
+          if (colonyNeedsHistory.length > 10) colonyNeedsHistory.shift();
+
+          // STEP 7: Process sales at NEW market prices
           const playerSalesData = {}; // Track sales per player
 
           players.forEach(player => {
@@ -658,11 +842,9 @@ app.post('/process-day', (req, res) => {
               if (sellAmount > 0) {
                 const pricePerUnit = newPrices[resource] || 10; // Use NEW prices, not old prices
                 const earnings = sellAmount * pricePerUnit;
-                
                 totalEarnings += earnings;
                 pdata.credits += earnings;
                 pdata.stockpiles[resource] -= sellAmount;
-                
                 // Record individual sale
                 playerSalesData[player.id].push({
                   resource,
@@ -670,15 +852,11 @@ app.post('/process-day', (req, res) => {
                   pricePerUnit,
                   totalEarned: earnings
                 });
-                // Removed sales news
-              } else if ((pdata.sales[resource] || 0) > 0 && (pdata.stockpiles[resource] || 0) === 0) {
-                // Removed failed sales news
               }
             });
             pdata.last_night_earnings = totalEarnings;
           });
 
-          // STEP 5: Update game state with new prices
           // 4. Update all players in database
           const updatePromises = Object.values(playerData).map(pdata => {
             return new Promise((resolve, reject) => {
@@ -749,17 +927,23 @@ app.post('/process-day', (req, res) => {
           Promise.all([...updatePromises, ...raidPromises, ...newsPromises, ...salesPromises])
             .then(() => {
               // Update market prices and game state
-              // Use the calculated newPrices from the market calculation step
-              const adjustedNeeds = state.colony_needs ? JSON.parse(state.colony_needs) : {};
-              const activePlayers = players.length;
               db.run(
                 `UPDATE game_state SET 
                  current_day = current_day + 1, 
                  market_prices = ?, 
-                 last_supply = ?,
+                 colony_needs = ?,
+                 daily_sales_totals = ?,
+                 price_history = ?,
+                 colony_needs_history = ?,
                  last_updated = CURRENT_TIMESTAMP 
                  WHERE id = 1`,
-                [JSON.stringify(newPrices), JSON.stringify(totalSupply)],
+                [
+                  JSON.stringify(newPrices), 
+                  JSON.stringify(tomorrowColonyNeeds),
+                  JSON.stringify(dailySalesTotals),
+                  JSON.stringify(priceHistory),
+                  JSON.stringify(colonyNeedsHistory)
+                ],
                 (err) => {
                   if (err) {
                     console.error('Error updating game state:', err);
@@ -776,9 +960,9 @@ app.post('/process-day', (req, res) => {
                       newDay: currentDay + 1,
                       news: news,
                       newPrices,
-                      activePlayers,
-                      adjustedNeeds,
-                      totalSupply
+                      activePlayers: players.length,
+                      adjustedNeeds: tomorrowColonyNeeds,
+                      totalSupply: dailySalesTotals
                     });
                   });
                 }
@@ -790,7 +974,9 @@ app.post('/process-day', (req, res) => {
             });
         });
       });
-    } catch (error) {
+    }
+  });
+} catch (error) {
       console.error('Processing error:', error);
       console.error('Error stack:', error.stack);
       res.json({ error: 'Processing failed: ' + error.message });
@@ -847,4 +1033,8 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Space Tribes server running on port ${PORT}`);
   console.log(`🌐 Open http://localhost:${PORT} to play!`);
+  if (PRACTICE_MODE) {
+    console.log(`🎯 PRACTICE MODE ACTIVE - ${PRACTICE_MODE_PLAYER} will face AI opponents!`);
+    console.log(`🤖 AI Tribes: Silas (Aggressive), Chris (Conservative), Brian (Balanced), Joel (Specialist), Curtis (Opportunistic)`);
+  }
 });
