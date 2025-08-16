@@ -521,7 +521,7 @@ db.serialize(() => {
     }
   });
 
-  db.run(`ALTER TABLE players ADD COLUMN last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP`, (err) => {
+  db.run(`ALTER TABLE players ADD COLUMN last_updated TIMESTAMP`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
       console.error('Database error adding last_updated column:', {
         error: err.message,

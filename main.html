@@ -2149,6 +2149,10 @@
         }
 
         function updateUI(gameData) {
+            console.log('🔍 updateUI called with gameData:', gameData);
+            console.log('🔍 Player data:', gameData.player);
+            console.log('🔍 Stockpiles:', gameData.player?.stockpiles);
+            
             // Update player status (new centralized function)
             updatePlayerStatus();
             
@@ -2191,6 +2195,31 @@
                 
                 const totalAvailableElement = document.getElementById(`total-available-${resource}`);
                 if (totalAvailableElement) totalAvailableElement.textContent = stockpileAmount;
+              });
+            }
+
+            // Update stockpile table
+            const stockpileTableBody = document.getElementById('stockpile');
+            if (stockpileTableBody && gameData.player?.stockpiles) {
+              stockpileTableBody.innerHTML = '';
+              
+              const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
+              const resourceIcons = ['💎', '🔻', '🔷', '🌱'];
+              const resourceNames = ['White Diamonds', 'Red Rubies', 'Blue Gems', 'Green Poison'];
+              
+              resources.forEach((resource, index) => {
+                const available = gameData.player.stockpiles[resource] || 0;
+                const protected = gameData.player.protectedResources?.[resource] || 0;
+                const total = available + protected;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                  <td>${resourceIcons[index]} ${resourceNames[index]}</td>
+                  <td>${available}</td>
+                  <td>${protected}</td>
+                  <td>${total}</td>
+                `;
+                stockpileTableBody.appendChild(row);
               });
             }
 
