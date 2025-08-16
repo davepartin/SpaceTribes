@@ -1702,6 +1702,18 @@
         }
 
         function submitDecisions() {
+            // Check if playerId is available
+            if (!playerId) {
+                showMessage('❌ Player ID not found. Please refresh the page or log in again.', 'error');
+                return;
+            }
+            
+            // Check if game data is loaded
+            if (!gameData || !gameData.gameState) {
+                showMessage('❌ Game data not loaded. Please wait for the page to fully load.', 'error');
+                return;
+            }
+            
             const totalRobotsAssigned = Object.values(robotAssignments).reduce((a, b) => a + b, 0);
             
             if (totalRobotsAssigned === 0) {
@@ -1719,7 +1731,7 @@
 
             // Validate raid selection
             if (raidTarget !== 'none' && !raidMaterial) {
-                showMessage('⚠️ You selected a raid target but no resource! Please choose which resource to steal.', 'error');
+                showMessage('⚠️ You must select a raid target but no resource! Please choose which resource to steal.', 'error');
                 return;
             }
             
@@ -1740,7 +1752,8 @@
             }
 
             const decisions = {
-                playerId,
+                playerId: playerId,
+                day: gameData ? gameData.gameState.currentDay : 1,
                 efforts: robotAssignments,
                 sales: sellAssignments,
                 raidTarget: rollResult >= 2 ? (raidTarget === 'none' ? null : raidTarget) : null,
