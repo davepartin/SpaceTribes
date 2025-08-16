@@ -2180,26 +2180,17 @@
               });
             }
 
-            // Update stockpiles display for selling decisions
-            if (gameData.leaderboard && Array.isArray(gameData.leaderboard)) {
-          const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
+                        // Update stockpiles display for selling decisions
+            if (gameData.player?.stockpiles) {
+              const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
               resources.forEach(resource => {
-                let stockpileText = '';
-                let totalAvailable = 0;
-                
-                gameData.leaderboard.forEach(player => {
-                  const amount = player.stockpiles[resource] || 0;
-                  stockpileText += `${player.name}: ${amount}, `;
-                  totalAvailable += amount;
-                });
-                
-                // Remove trailing comma and space
-                stockpileText = stockpileText.slice(0, -2);
+                const stockpileAmount = gameData.player.stockpiles[resource] || 0;
                 
                 const stockpilesElement = document.getElementById(`stockpiles-${resource}`);
-                if (stockpilesElement) stockpilesElement.textContent = stockpileText;
+                if (stockpilesElement) stockpilesElement.textContent = stockpileAmount;
+                
                 const totalAvailableElement = document.getElementById(`total-available-${resource}`);
-                if (totalAvailableElement) totalAvailableElement.textContent = totalAvailable;
+                if (totalAvailableElement) totalAvailableElement.textContent = stockpileAmount;
               });
             }
 

@@ -521,6 +521,15 @@ db.serialize(() => {
     }
   });
 
+  db.run(`ALTER TABLE players ADD COLUMN last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Database error adding last_updated column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Add dump tracking to players table
   db.run(`ALTER TABLE players ADD COLUMN daily_dump_used TEXT DEFAULT 'none'`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
