@@ -2030,7 +2030,7 @@
             const lastNightSalesDiv = document.getElementById('lastNightSales');
             if (lastNightSalesDiv) { // Add null check
                 lastNightSalesDiv.innerHTML = '';
-                if (gameData.lastNightSales && gameData.lastNightSales.length > 0) {
+                if (gameData.lastNightSales && Array.isArray(gameData.lastNightSales) && gameData.lastNightSales.length > 0) {
                   gameData.lastNightSales.forEach(sale => {
                     lastNightSalesDiv.innerHTML += `<p>${sale.quantity} ${getResourceIcon(sale.resource)} sold for $${sale.pricePerUnit} each. Total: $${sale.totalEarned}</p>`;
                   });
@@ -2317,8 +2317,15 @@
               console.log('Game data received:', data);
               
               gameData = data;
-              updateUI(gameData); // Pass gameData to updateUI
-              updateGameStatus(); // Add this line
+              
+              // Wrap updateUI in try-catch to prevent crashes
+              try {
+                updateUI(gameData); // Pass gameData to updateUI
+                updateGameStatus(); // Add this line
+              } catch (error) {
+                console.error('Error in updateUI:', error);
+                showMessage(`UI update error: ${error.message}. Some features may not display correctly.`, 'warning');
+              }
               
               // Check for game end
               if (data.gameStatus && data.gameStatus.isGameEnded && data.gameStatus.winner) { // Use gameStatus.isGameEnded
