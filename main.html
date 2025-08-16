@@ -1772,7 +1772,17 @@
                     showMessage(data.error, 'error');
                 } else {
                     showMessage(data.message, 'success');
-                    loadGameDataEnhanced(); // Reload data to show updated submission status
+                    
+                    // Mark this day as submitted in localStorage
+                    const currentDay = gameData?.gameState?.currentDay || 1;
+                    const submissionKey = `submitted_day_${currentDay}`;
+                    localStorage.setItem(submissionKey, 'true');
+                    
+                    // Update the submit button state immediately
+                    updateSubmitButton();
+                    
+                    // Reload data to show updated submission status
+                    loadGameDataEnhanced();
                 }
         })
         .catch(err => {
@@ -1854,8 +1864,9 @@
             if (submitDaySpan) submitDaySpan.textContent = currentDay;
             
             // Check if player has already submitted decisions for this day
-            // For now, we'll assume they haven't submitted (since we don't track this yet)
-            const hasSubmitted = false; // TODO: Implement submission tracking
+            // We'll check localStorage to track submission status
+            const submissionKey = `submitted_day_${currentDay}`;
+            const hasSubmitted = localStorage.getItem(submissionKey) === 'true';
             
             if (hasSubmitted) {
                 submitBtn.innerHTML = `✅ DECISIONS SUBMITTED FOR DAY ${currentDay} ✅`;
@@ -2332,6 +2343,15 @@
               const blockTargetElement = document.getElementById('blockTarget'); // Added null check for blockTarget
               if (blockTargetElement) blockTargetElement.value = 'none'; // Reset block target
               updateDiceSection(); // Reset dice display
+              
+              // Clear submission status for the processed day
+              const processedDay = gameData?.gameState?.currentDay || 1;
+              const submissionKey = `submitted_day_${processedDay}`;
+              localStorage.removeItem(submissionKey);
+              
+              // Update the submit button state for the new day
+              updateSubmitButton();
+              
               loadGameDataEnhanced(); // Use enhanced version
         }
       })
