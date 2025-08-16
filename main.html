@@ -1086,7 +1086,7 @@
           margin: 30px 0;
           padding: 20px;
           border-top: 2px solid rgba(255, 255, 255, 0.1);
-          display: none; /* Hide by default */
+          display: block; /* Show by default for debugging */
         }
 
         .admin-buttons {
@@ -1510,6 +1510,7 @@
       <div class="admin-buttons">
             <button class="process-btn" onclick="processDay()">⚡ ADMIN: PROCESS NEXT DAY</button>
             <button class="admin-btn reset-btn" onclick="resetGame()">💀 RESET GAME</button>
+            <button class="admin-btn debug-btn" onclick="clearSubmissionStatus()">🔧 CLEAR SUBMISSION STATUS</button>
           </div>
         </div>
     </div>
@@ -1603,6 +1604,21 @@
                 // Fallback to alert if the message div is truly missing
                 alert(`Game Message: ${msg}`);
             }
+        }
+        
+        // Function to clear submission status manually (for debugging)
+        function clearSubmissionStatus() {
+            const currentDay = gameData?.gameState?.currentDay || 1;
+            const submissionKey = `submitted_day_${currentDay}`;
+            localStorage.removeItem(submissionKey);
+            
+            // Also clear any other submission keys
+            for (let i = 1; i <= 10; i++) {
+                localStorage.removeItem(`submitted_day_${i}`);
+            }
+            
+            showMessage('Submission status cleared! You can now submit decisions again.', 'success');
+            updateSubmitButton();
         }
 
     function updateRobotDisplay() {
