@@ -787,6 +787,33 @@ app.post('/process-day', (req, res) => {
   });
 });
 
+// Clear decisions for a specific day (admin function)
+app.post('/clear-decisions/:day', (req, res) => {
+  const day = parseInt(req.params.day);
+  
+  if (!day || day < 1) {
+    return res.json({ error: 'Invalid day parameter' });
+  }
+  
+  db.run('DELETE FROM decisions WHERE day = ?', [day], function(err) {
+    if (err) {
+      console.error('Database error clearing decisions:', {
+        error: err.message,
+        day,
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ error: 'Database error' });
+    }
+    
+    console.log(`🗑️ Cleared ${this.changes} decisions for day ${day}`);
+    res.json({ 
+      success: true, 
+      message: `Cleared ${this.changes} decisions for day ${day}`,
+      changes: this.changes
+    });
+  });
+});
+
 // Submit decisions endpoint
 app.post('/submit-decisions', (req, res) => {
   const { playerId, day, efforts, sales, raidTarget, raidMaterial, blockTarget } = req.body;

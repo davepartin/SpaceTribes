@@ -1510,7 +1510,8 @@
       <div class="admin-buttons">
             <button class="process-btn" onclick="processDay()">⚡ ADMIN: PROCESS NEXT DAY</button>
             <button class="admin-btn reset-btn" onclick="resetGame()">💀 RESET GAME</button>
-            <button class="admin-btn debug-btn" onclick="clearSubmissionStatus()">🔧 CLEAR SUBMISSION STATUS</button>
+            <button class="admin-btn debug-btn" onclick="clearSubmissionStatus()">🔧 CLEAR FRONTEND STATUS</button>
+            <button class="admin-btn debug-btn" onclick="clearServerDecisions()">🗑️ CLEAR SERVER DECISIONS</button>
           </div>
         </div>
     </div>
@@ -1617,8 +1618,28 @@
                 localStorage.removeItem(`submitted_day_${i}`);
             }
             
-            showMessage('Submission status cleared! You can now submit decisions again.', 'success');
+            showMessage('Frontend submission status cleared! You can now submit decisions again.', 'success');
             updateSubmitButton();
+        }
+        
+        // Function to clear server-side decisions for current day
+        function clearServerDecisions() {
+            const currentDay = gameData?.gameState?.currentDay || 1;
+            
+            fetch(`/clear-decisions/${currentDay}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(`Server decisions for day ${currentDay} cleared! You can now submit new decisions.`, 'success');
+                        updateSubmitButton();
+                    } else {
+                        showMessage(data.error || 'Failed to clear server decisions', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error clearing server decisions:', err);
+                    showMessage('Failed to clear server decisions', 'error');
+                });
         }
 
     function updateRobotDisplay() {
