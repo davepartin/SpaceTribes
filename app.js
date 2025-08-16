@@ -94,7 +94,7 @@ function processCoreDayLogic(currentDay, players, decisions, callback) {
         stockpiles: JSON.parse(player.stockpiles || '{"whiteDiamonds":3,"redRubies":3,"blueGems":3,"greenPoison":3}'),
         protectedResources: JSON.parse(player.protected_resources || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'),
         lastEfforts: { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 },
-        last_night_earnings: 0
+        last_night_earnings: player.last_night_earnings || 0
       };
     });
     
@@ -176,13 +176,64 @@ function processCoreDayLogic(currentDay, players, decisions, callback) {
       }
     });
     
-    // STEP 3: MARKET PRICE CALCULATION
+    // STEP 3: COMBAT PHASE - Resolve raids and blocks
+    console.log('⚔️ Combat phase - resolving raids and blocks...');
+    
+    players.forEach(player => {
+      const pdata = playerData[player.id];
+      const decision = decisionMap[player.id];
+      
+      if (decision && decision.raidTarget && decision.raidTarget !== 'none') {
+        // Find target player
+        const targetPlayer = players.find(p => p.name === decision.raidTarget);
+        if (targetPlayer && targetPlayer.id !== player.id) {
+          const targetData = playerData[targetPlayer.id];
+          
+          // Check if raid is blocked
+          const isBlocked = targetData.blockTarget === player.name;
+          
+          if (isBlocked) {
+            // Raid blocked
+            news.push(`🛡️ ${player.name}'s raid on ${targetPlayer.name} was blocked!`);
+            console.log(`🛡️ ${player.name}'s raid on ${targetPlayer.name} was blocked by ${targetPlayer.name}`);
+          } else {
+            // Raid successful - steal 2 units of specified resource
+            const raidResource = decision.raidMaterial;
+            if (raidResource && raidResource !== 'none' && targetData.stockpiles[raidResource] >= 2) {
+              // Transfer resources
+              targetData.stockpiles[raidResource] -= 2;
+              pdata.stockpiles[raidResource] += 2;
+              
+              // Add to protected resources (can't be raided until next day)
+              pdata.protectedResources = pdata.protectedResources || {};
+              pdata.protectedResources[raidResource] = (pdata.protectedResources[raidResource] || 0) + 2;
+              
+              // Deduct raid cost (2 green poison)
+              if (pdata.stockpiles.greenPoison >= 2) {
+                pdata.stockpiles.greenPoison -= 2;
+                news.push(`🚀 ${player.name} successfully raided ${targetPlayer.name} and stole 2 ${getResourceIcon(raidResource)} ${raidResource}!`);
+                console.log(`🚀 ${player.name} raided ${targetPlayer.name}: stole 2 ${raidResource}, cost 2🌱`);
+              } else {
+                // Not enough green poison for raid
+                news.push(`❌ ${player.name} attempted to raid ${targetPlayer.name} but didn't have enough green poison!`);
+                console.log(`❌ ${player.name} raid failed: insufficient green poison`);
+              }
+            } else {
+              news.push(`❌ ${player.name}'s raid on ${targetPlayer.name} failed - target resource not available!`);
+              console.log(`❌ ${player.name} raid failed: target resource ${raidResource} not available`);
+            }
+          }
+        }
+      }
+    });
+    
+    // STEP 4: MARKET PRICE CALCULATION
     const currentPrices = { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
     const currentColonyNeeds = getCurrentColonyNeeds(currentDay);
     const newPrices = calculateSellingBasedPrices(dailySalesTotals, currentColonyNeeds, currentPrices);
     const tomorrowColonyNeeds = getCurrentColonyNeeds(currentDay + 1);
     
-    // STEP 4: UPDATE PRICE HISTORY
+    // STEP 5: UPDATE PRICE HISTORY
     const priceHistory = [{ day: currentDay, ...currentPrices }];
     const colonyNeedsHistory = [{ day: currentDay, ...currentColonyNeeds }];
     
@@ -272,40 +323,53 @@ function getCurrentColonyNeeds(currentDay) {
   return needs[dayIndex];
 }
 
-// Replace the market price calculation in process-day endpoint
+// Advanced market price calculation based on supply vs. demand ratios
 function calculateSellingBasedPrices(dailySalesTotals, colonyNeeds, currentPrices) {
   // Market prices are adjusted daily based on supply (total player sales) vs. demand (colony needs).
+  // This implements the sophisticated pricing algorithm from the game design guide.
   const newPrices = {};
   const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
   
   resources.forEach(resource => {
     const totalSold = dailySalesTotals[resource] || 0;
-    const needed = colonyNeeds[resource] || 15;
-    const currentPrice = currentPrices[resource] || 10;
+    const colonyDemand = colonyNeeds[resource] || 15;
     
-    // A "sell ratio" (totalSold / needed) determines the price multiplier for the next day.
-    let sellRatio = totalSold / needed;
-    let priceMultiplier = 1.0;
+    // Calculate supply/demand ratio
+    const supplyDemandRatio = totalSold / colonyDemand;
     
-    // Price multiplier tiers based on how much of the colony's demand was met:
-    if (sellRatio >= 1.5) {
-      priceMultiplier = 0.6; // -40% (major oversupply: >=150% of demand met)
-    } else if (sellRatio >= 1.2) {
-      priceMultiplier = 0.8; // -20% (moderate oversupply: 120%-149% of demand met)
-    } else if (sellRatio >= 0.8) {
-      priceMultiplier = 1.0; // No change (balanced: 80%-119% of demand met)
-    } else if (sellRatio >= 0.5) {
-      priceMultiplier = 1.3; // +30% (undersupply: 50%-79% of demand met)
-    } else {
-      priceMultiplier = 1.6; // +60% (severe shortage: <50% of demand met)
+    // Apply price multiplier based on supply/demand ratio
+    let priceMultiplier = 1.0; // Stable prices (80-119%)
+    
+    if (supplyDemandRatio >= 1.5) {
+      // 150%+ supply = 40% price drop
+      priceMultiplier = 0.6;
+    } else if (supplyDemandRatio >= 1.2) {
+      // 120-149% = 20% price drop
+      priceMultiplier = 0.8;
+    } else if (supplyDemandRatio < 0.5) {
+      // <50% = 60% price spike
+      priceMultiplier = 1.6;
+    } else if (supplyDemandRatio < 0.8) {
+      // 50-79% = 30% price increase
+      priceMultiplier = 1.3;
     }
     
-    // The new price is calculated, then rounded and clamped to a value between min and max.
-    newPrices[resource] = Math.round(Math.max(GAME_CONFIG.PRICE_MIN, Math.min(GAME_CONFIG.PRICE_MAX, currentPrice * priceMultiplier)));
+    // Calculate new price with multiplier
+    const basePrice = currentPrices[resource] || 20;
+    let newPrice = Math.round(basePrice * priceMultiplier);
+    
+    // Clamp prices between $5-$50 as per game design
+    newPrice = Math.max(5, Math.min(50, newPrice));
+    
+    newPrices[resource] = newPrice;
+    
+    // Log price changes for transparency
+    console.log(`💰 ${resource}: ${totalSold} sold vs ${colonyDemand} demand (${(supplyDemandRatio * 100).toFixed(0)}%) - Price: $${basePrice} → $${newPrice} (${priceMultiplier > 1 ? '+' : ''}${((priceMultiplier - 1) * 100).toFixed(0)}%)`);
   });
   
   return newPrices;
 }
+
 
 // ========================================
 // GROUP 3: GAME STRUCTURE IMPLEMENTATION
