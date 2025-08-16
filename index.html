@@ -1,325 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Space Tribes - Join the Colony</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Space+Mono&display=swap" rel="stylesheet">
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Space Tribes: Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #0c0c1e 0%, #1a1a3e 50%, #2d1b69 100%);
+            color: #ffffff;
+            font-family: 'Space Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .login-container {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(0, 255, 255, 0.3);
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+            text-align: center;
+            max-width: 450px;
+            width: 100%;
+            animation: fadeIn 1s ease-out;
+        }
+        h1 {
+            font-family: 'Orbitron', monospace;
+            font-weight: 900;
+            font-size: 2.5rem;
+            margin-bottom: 30px;
+            background: linear-gradient(45deg, #00ffff, #ff00ff, #ffff00);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 1rem;
+            color: #00ffff;
+        }
+        input[type="text"],
+        input[type="password"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-family: 'Space Mono', monospace;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #ff00ff;
+            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #00ff00, #00cc00);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-family: 'Orbitron', monospace;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: linear-gradient(135deg, #00cc00, #00ff00);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+        }
+        .message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            display: none; /* Hidden by default */
+        }
+        .message.error {
+            background: rgba(255, 0, 0, 0.1);
+            border: 1px solid #ff0000;
+            color: #ff6666;
+        }
+        .message.success {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
-    body {
-      font-family: 'Orbitron', 'Space Mono', sans-serif;
-      background: linear-gradient(135deg, #0a0f2c 0%, #1a1f3c 100%);
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 100vh;
-      padding: 20px;
-      overflow: hidden;
-    }
-
-    .stars {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    .star {
-      position: absolute;
-      width: 2px;
-      height: 2px;
-      background: white;
-      border-radius: 50%;
-      animation: twinkle 3s infinite;
-    }
-
-    @keyframes twinkle {
-      0%, 100% { opacity: 0; }
-      50% { opacity: 1; }
-    }
-
-    .container {
-      max-width: 500px;
-      width: 100%;
-      background: rgba(15, 15, 35, 0.95);
-      padding: 40px;
-      border-radius: 20px;
-      box-shadow: 0 0 40px rgba(0, 212, 255, 0.4);
-      border: 2px solid rgba(0, 212, 255, 0.3);
-      backdrop-filter: blur(10px);
-      animation: fadeIn 1s ease-out;
-      z-index: 10;
-    }
-
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(30px) scale(0.9);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-      }
-    }
-
-    h1 {
-      text-align: center;
-      color: #00d4ff;
-      font-size: 2.5em;
-      margin-bottom: 10px;
-      text-shadow: 0 0 30px rgba(0, 212, 255, 0.8);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-
-    .subtitle {
-      text-align: center;
-      color: #00ffcc;
-      margin-bottom: 30px;
-      font-size: 1.1em;
-    }
-
-    .form-group {
-      margin-bottom: 20px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      color: #00d4ff;
-      font-weight: 700;
-      text-transform: uppercase;
-      font-size: 0.9em;
-      letter-spacing: 1px;
-    }
-
-    input[type="text"],
-    input[type="password"],
-    select {
-      width: 100%;
-      padding: 15px;
-      background: rgba(0, 0, 0, 0.5);
-      border: 2px solid rgba(0, 212, 255, 0.3);
-      border-radius: 8px;
-      color: white;
-      font-size: 1em;
-      font-family: 'Space Mono', monospace;
-      transition: all 0.3s ease;
-    }
-
-    input[type="text"]:focus,
-    input[type="password"]:focus,
-    select:focus {
-      outline: none;
-      border-color: #00d4ff;
-      box-shadow: 0 0 15px rgba(0, 212, 255, 0.5);
-      background: rgba(0, 0, 0, 0.7);
-    }
-
-    select option {
-      background: #0a0f2c;
-      color: white;
-    }
-
-    button {
-      width: 100%;
-      padding: 15px;
-      background: linear-gradient(135deg, #00d4ff 0%, #00aacc 100%);
-      border: none;
-      border-radius: 8px;
-      color: white;
-      font-size: 1.2em;
-      font-weight: 700;
-      font-family: 'Orbitron', sans-serif;
-      cursor: pointer;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      transition: all 0.3s ease;
-      margin-top: 10px;
-    }
-
-    button:hover {
-      background: linear-gradient(135deg, #00aacc 0%, #0088aa 100%);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(0, 212, 255, 0.5);
-    }
-
-    button:active {
-      transform: translateY(0);
-    }
-
-    #error {
-      color: #ff6666;
-      text-align: center;
-      margin-top: 20px;
-      padding: 10px;
-      background: rgba(255, 102, 102, 0.1);
-      border-radius: 8px;
-      border: 1px solid rgba(255, 102, 102, 0.3);
-      display: none;
-    }
-
-    .info-box {
-      background: rgba(0, 212, 255, 0.1);
-      border: 1px solid rgba(0, 212, 255, 0.3);
-      border-radius: 8px;
-      padding: 15px;
-      margin-top: 20px;
-      font-size: 0.9em;
-      line-height: 1.6;
-    }
-
-    .race-emoji {
-      font-size: 2em;
-      margin-right: 10px;
-      vertical-align: middle;
-    }
-
-    .loading {
-      display: inline-block;
-      width: 20px;
-      height: 20px;
-      border: 3px solid rgba(255, 255, 255, 0.3);
-      border-radius: 50%;
-      border-top-color: #00d4ff;
-      animation: spin 1s ease-in-out infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  </style>
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+            .login-container {
+                padding: 25px;
+            }
+            label, input, select, button {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div class="stars" id="stars"></div>
-  
-  <div class="container">
-    <h1>🚀 SPACE TRIBES 🚀</h1>
-    <p class="subtitle">Join the Galactic Mining Colony</p>
-    
-    <form onsubmit="return login(event)">
-      <div class="form-group">
-        <label for="playerSelect">Choose Your Commander</label>
-        <select id="playerSelect" required>
-          <option value="">-- Select Commander --</option>
-          <option value="Dave">🐻 Dave the Endorian</option>
-          <option value="Silas">🦎 Silas the Silurian</option>
-          <option value="Chris">🔆 Chris the Elantrian</option>
-          <option value="Brian">🧠 Brian the Psychlon</option>
-          <option value="Joel">🛡️ Joel the Leojian</option>
-          <option value="Curtis">💧 Curtis the Boucher</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label for="pinInput">4-Digit PIN</label>
-        <input type="password" id="pinInput" placeholder="Enter your 4-digit PIN" maxlength="4" required>
-      </div>
-
-      <button type="submit" id="loginBtn">
-        <span id="btnText">ENTER THE COLONY</span>
-      </button>
-    </form>
-    <div id="error"></div>
-
-    <div class="info-box">
-      <strong>🎮 Game Info:</strong><br>
-      • Mine resources with robot workers<br>
-      • Trade on the galactic market<br>
-      • Raid other players (costs 2 Green Poison)<br>
-      • Become the richest space commander!
+    <div class="login-container">
+        <h1>Space Tribes</h1>
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="commanderName">Commander Name:</label>
+                <select id="commanderName" name="name" required>
+                    <option value="">Select your Commander...</option>
+                    <option value="Dave">Dave</option>
+                    <option value="Silas">Silas</option>
+                    <option value="Chris">Chris</option>
+                    <option value="Brian">Brian</option>
+                    <option value="Joel">Joel</option>
+                    <option value="Curtis">Curtis</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="pin">PIN:</label>
+                <input type="password" id="pin" name="pin" required>
+            </div>
+            <button type="submit">Enter Command Center</button>
+        </form>
+        <div id="message" class="message"></div>
     </div>
-  </div>
 
-  <script>
-    // Create starfield
-    function createStars() {
-      const starsContainer = document.getElementById('stars');
-      const starCount = 100;
-      
-      for (let i = 0; i < starCount; i++) {
-        const star = document.createElement('div');
-        star.className = 'star';
-        star.style.left = Math.random() * 100 + '%';
-        star.style.top = Math.random() * 100 + '%';
-        star.style.animationDelay = Math.random() * 3 + 's';
-        star.style.animationDuration = (Math.random() * 3 + 2) + 's';
-        starsContainer.appendChild(star);
-      }
-    }
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async (event) => {
+            event.preventDefault(); // Prevent default form submission (page refresh)
 
-    createStars();
+            const name = document.getElementById('commanderName').value;
+            const pin = document.getElementById('pin').value;
+            const messageDiv = document.getElementById('message');
 
-    function showError(message) {
-      const errorDiv = document.getElementById('error');
-      errorDiv.textContent = message;
-      errorDiv.style.display = 'block';
-      setTimeout(() => {
-        errorDiv.style.display = 'none';
-      }, 5000);
-    }
+            messageDiv.style.display = 'none'; // Hide previous messages
 
-    function login(event) {
-      event.preventDefault();
-      
-      const name = document.getElementById('playerSelect').value;
-      const pin = document.getElementById('pinInput').value;
-      const btn = document.getElementById('loginBtn');
-      const btnText = document.getElementById('btnText');
+            if (!name) {
+                showMessage('Please select a commander.', 'error');
+                return;
+            }
+            if (!pin) {
+                showMessage('Please enter your PIN.', 'error');
+                return;
+            }
 
-      if (!name) {
-        showError('Please select a commander!');
-        return false;
-      }
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, pin })
+                });
 
-      if (!pin || pin.length !== 4 || !/^\d{4}$/.test(pin)) {
-        showError('Please enter a 4-digit PIN!');
-        return false;
-      }
+                const data = await response.json();
 
-      // Show loading
-      btn.disabled = true;
-      btnText.innerHTML = '<div class="loading"></div>';
+                if (data.error) {
+                    showMessage(data.error, 'error');
+                } else {
+                    // Login successful
+                    localStorage.setItem('playerId', data.playerId);
+                    showMessage('Login successful! Redirecting...', 'success');
+                    // Redirect to the main game page
+                    window.location.href = '/main.html'; 
+                }
+            } catch (error) {
+                console.error('Login request failed:', error);
+                showMessage('An unexpected error occurred. Please try again.', 'error');
+            }
+        });
 
-      fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name, pin: pin })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) {
-          showError(data.error);
-          btn.disabled = false;
-          btnText.textContent = 'ENTER THE COLONY';
-        } else {
-          btnText.textContent = '🚀 LAUNCHING...';
-          setTimeout(() => {
-            window.location.href = `/main.html?playerId=${data.playerId}`;
-          }, 500);
+        function showMessage(msg, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = msg;
+            messageDiv.className = `message ${type}`;
+            messageDiv.style.display = 'block';
+            // Optional: Hide message after a few seconds
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
         }
-      })
-      .catch(err => {
-        console.error('Login error:', err);
-        showError('Connection failed. Please try again.');
-        btn.disabled = false;
-        btnText.textContent = 'ENTER THE COLONY';
-      });
 
-      return false;
-    }
-  </script>
+        // Check if playerId already exists in localStorage (e.g., if user is already logged in)
+        // If so, redirect directly to main.html
+        document.addEventListener('DOMContentLoaded', () => {
+            if (localStorage.getItem('playerId')) {
+                window.location.href = '/main.html';
+            }
+        });
+    </script>
 </body>
 </html>

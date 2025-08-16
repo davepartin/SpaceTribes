@@ -6,12 +6,21 @@ const path = require('path');
 const app = express();
 const db = new sqlite3.Database('./spacetribes.db');
 
-// Game Configuration
-const PRACTICE_MODE = true; // Set to false to disable AI tribes
-const PRACTICE_MODE_PLAYER = 'Dave'; // Only this player gets AI opponents
-
 app.use(bodyParser.json());
 app.use(express.static('.'));
+
+// Game Configuration Constants
+const GAME_CONFIG = {
+  MAX_EFFORT_POINTS: 12,
+  MAX_SELL_PER_RESOURCE: 15,
+  MAX_DUMP_PER_DAY: 15,
+  RAID_COST: 2,
+  RAID_LOOT: 2,
+  DUMP_PRICE: 10,
+  GAME_DURATION_DAYS: 10,
+  PRICE_MIN: 5,
+  PRICE_MAX: 50
+};
 
 // Helper to get resource icon
 function getResourceIcon(resource) {
@@ -42,6 +51,169 @@ function generateColonyNeeds() {
   return colonyNeeds;
 }
 
+// Practice Mode Configuration
+const PRACTICE_MODE = true;
+const PRACTICE_MODE_PLAYER = 'Dave';
+
+// Simple AI behavior for practice mode
+function generateSimpleAIDecisions(playerName) {
+  const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
+  
+  // AI players always do the same thing: mine 1 random resource, sell 1 random resource
+  const randomMineResource = resources[Math.floor(Math.random() * resources.length)];
+  const randomSellResource = resources[Math.floor(Math.random() * resources.length)];
+  
+  return {
+    efforts: { [randomMineResource]: 1 },
+    sales: { [randomSellResource]: 1 },
+    raidTarget: 'none',
+    raidMaterial: 'none',
+    blockTarget: 'none'
+  };
+}
+
+// Helper function to add categorized news
+function addGeneralNews(day, message, priority = 1) {
+  return new Promise((resolve, reject) => {
+    db.run(
+      'INSERT INTO news (day, message, category, priority) VALUES (?, ?, ?, ?)',
+      [day, message, 'general', priority],
+      (err) => {
+        if (err) reject(err);
+        else resolve();
+      }
+    );
+  });
+}
+
+// Core day processing logic
+function processCoreDayLogic(currentDay, players, decisions, callback) {
+  try {
+    // Initialize data structures
+    const playerData = {};
+    const decisionMap = {};
+    const news = [];
+    
+    // Initialize totalSupply for market calculations
+    const totalSupply = { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
+    
+    // Parse player data and decisions
+    players.forEach(player => {
+      playerData[player.id] = {
+        id: player.id,
+        name: player.name,
+        credits: player.credits || 0,
+        stockpiles: JSON.parse(player.stockpiles || '{"whiteDiamonds":3,"redRubies":3,"blueGems":3,"greenPoison":3}'),
+        protectedResources: JSON.parse(player.protected_resources || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'),
+        lastEfforts: { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 },
+        last_night_earnings: 0
+      };
+    });
+    
+    decisions.forEach(decision => {
+      decisionMap[decision.playerId] = {
+        efforts: JSON.parse(decision.efforts || '{}'),
+        sales: JSON.parse(decision.sales || '{}'),
+        raidTarget: decision.raidTarget || 'none',
+        raidMaterial: decision.raidMaterial || 'none',
+        blockTarget: decision.blockTarget || 'none'
+      };
+    });
+    
+    // STEP 1: MINING - Add mined resources to stockpiles
+    players.forEach(player => {
+      const pdata = playerData[player.id];
+      const decision = decisionMap[player.id];
+      
+      if (decision && decision.efforts) {
+        Object.keys(decision.efforts).forEach(resource => {
+          const effort = decision.efforts[resource] || 0;
+          if (effort > 0) {
+            const mined = effort;
+            pdata.stockpiles[resource] = (pdata.stockpiles[resource] || 0) + mined;
+            pdata.lastEfforts[resource] = mined;
+            totalSupply[resource] += mined;
+            
+            news.push(`⛏️ ${player.name} mined ${mined} ${getResourceIcon(resource)} ${resource}`);
+          }
+        });
+      } else {
+        // Player didn't submit decisions - give passive income (2💎 2🔻 2🔷 2🌱)
+        pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
+        pdata.stockpiles.redRubies = (pdata.stockpiles.redRubies || 0) + 2;
+        pdata.stockpiles.blueGems = (pdata.stockpiles.blueGems || 0) + 2;
+        pdata.stockpiles.greenPoison = (pdata.stockpiles.greenPoison || 0) + 2;
+        
+        // Update their lastEfforts to show what they "mined"
+        pdata.lastEfforts = {
+          whiteDiamonds: 2,
+          redRubies: 2,
+          blueGems: 2,
+          greenPoison: 2
+        };
+        
+        // Add to total supply for market calculations
+        totalSupply.whiteDiamonds += 2;
+        totalSupply.redRubies += 2;
+        totalSupply.blueGems += 2;
+        totalSupply.greenPoison += 2;
+        
+        news.push(`🌙 ${player.name} was auto-assigned: 2💎 2🔻 2🔷 2🌱 (absent)`);
+      }
+    });
+    
+    // STEP 2: SALES - Process resource sales
+    const dailySalesTotals = { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
+    
+    players.forEach(player => {
+      const pdata = playerData[player.id];
+      const decision = decisionMap[player.id];
+      
+      if (decision && decision.sales) {
+        Object.keys(decision.sales).forEach(resource => {
+          const sellAmount = Math.min(decision.sales[resource] || 0, pdata.stockpiles[resource] || 0);
+          if (sellAmount > 0) {
+            // Get current market price for this resource
+            const currentPrice = 20; // Default price, will be updated by market calculation
+            const earnings = sellAmount * currentPrice;
+            
+            pdata.credits += earnings;
+            pdata.stockpiles[resource] -= sellAmount;
+            pdata.last_night_earnings += earnings;
+            dailySalesTotals[resource] += sellAmount;
+            
+            news.push(`💰 ${player.name} sold ${sellAmount} ${getResourceIcon(resource)} for $${earnings}`);
+          }
+        });
+      }
+    });
+    
+    // STEP 3: MARKET PRICE CALCULATION
+    const currentPrices = { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
+    const currentColonyNeeds = getCurrentColonyNeeds(currentDay);
+    const newPrices = calculateSellingBasedPrices(dailySalesTotals, currentColonyNeeds, currentPrices);
+    const tomorrowColonyNeeds = getCurrentColonyNeeds(currentDay + 1);
+    
+    // STEP 4: UPDATE PRICE HISTORY
+    const priceHistory = [{ day: currentDay, ...currentPrices }];
+    const colonyNeedsHistory = [{ day: currentDay, ...currentColonyNeeds }];
+    
+    // Return results
+    callback(null, {
+      newPrices,
+      tomorrowColonyNeeds,
+      totalSupply,
+      dailySalesTotals,
+      priceHistory,
+      colonyNeedsHistory,
+      news
+    });
+    
+  } catch (error) {
+    callback(error);
+  }
+}
+
 // Add this function to get current day's needs
 function getCurrentColonyNeeds(currentDay) {
   const needs = generateColonyNeeds();
@@ -49,36 +221,9 @@ function getCurrentColonyNeeds(currentDay) {
   return needs[dayIndex];
 }
 
-// Simple AI for Practice Mode - Other players just mine 1 resource and sell 1 resource
-function generateSimpleAIDecisions(playerName, stockpiles) {
-  // Simple strategy: mine 1 resource, sell 1 resource, never raid
-  const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
-  
-  // Pick a random resource to mine (1 robot)
-  const mineResource = resources[Math.floor(Math.random() * resources.length)];
-  const mining = {};
-  resources.forEach(resource => {
-    mining[resource] = resource === mineResource ? 1 : 0;
-  });
-  
-  // Pick a random resource to sell (1 unit if available)
-  const sellResource = resources[Math.floor(Math.random() * resources.length)];
-  const selling = {};
-  resources.forEach(resource => {
-    const available = stockpiles[resource] || 0;
-    selling[resource] = (resource === sellResource && available > 0) ? 1 : 0;
-  });
-  
-  return {
-    efforts: mining,
-    sales: selling,
-    raidTarget: 'none',
-    raidMaterial: null
-  };
-}
-
 // Replace the market price calculation in process-day endpoint
 function calculateSellingBasedPrices(dailySalesTotals, colonyNeeds, currentPrices) {
+  // Market prices are adjusted daily based on supply (total player sales) vs. demand (colony needs).
   const newPrices = {};
   const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
   
@@ -87,25 +232,72 @@ function calculateSellingBasedPrices(dailySalesTotals, colonyNeeds, currentPrice
     const needed = colonyNeeds[resource] || 15;
     const currentPrice = currentPrices[resource] || 10;
     
+    // A "sell ratio" (totalSold / needed) determines the price multiplier for the next day.
     let sellRatio = totalSold / needed;
     let priceMultiplier = 1.0;
     
+    // Price multiplier tiers based on how much of the colony's demand was met:
     if (sellRatio >= 1.5) {
-      priceMultiplier = 0.6; // -40% (major oversupply)
+      priceMultiplier = 0.6; // -40% (major oversupply: >=150% of demand met)
     } else if (sellRatio >= 1.2) {
-      priceMultiplier = 0.8; // -20% (moderate oversupply)
+      priceMultiplier = 0.8; // -20% (moderate oversupply: 120%-149% of demand met)
     } else if (sellRatio >= 0.8) {
-      priceMultiplier = 1.0; // No change (balanced)
+      priceMultiplier = 1.0; // No change (balanced: 80%-119% of demand met)
     } else if (sellRatio >= 0.5) {
-      priceMultiplier = 1.3; // +30% (undersupply)
+      priceMultiplier = 1.3; // +30% (undersupply: 50%-79% of demand met)
     } else {
-      priceMultiplier = 1.6; // +60% (severe shortage)
+      priceMultiplier = 1.6; // +60% (severe shortage: <50% of demand met)
     }
     
-    newPrices[resource] = Math.round(Math.max(5, Math.min(50, currentPrice * priceMultiplier)));
+    // The new price is calculated, then rounded and clamped to a value between min and max.
+    newPrices[resource] = Math.round(Math.max(GAME_CONFIG.PRICE_MIN, Math.min(GAME_CONFIG.PRICE_MAX, currentPrice * priceMultiplier)));
   });
   
   return newPrices;
+}
+
+// ========================================
+// GROUP 3: GAME STRUCTURE IMPLEMENTATION
+// ========================================
+
+// 1. Check if game has ended (10 days completed)
+function checkGameEnd(currentDay) {
+  return currentDay > GAME_CONFIG.GAME_DURATION_DAYS;
+}
+
+// 2. Determine winner based on credits
+function determineWinner(players) {
+  if (!players || players.length === 0) return null;
+  
+  // Sort players by credits (descending) and return winner
+  const sortedPlayers = players.sort((a, b) => b.credits - a.credits);
+  const winner = sortedPlayers[0];
+  
+  return {
+    winner: winner,
+    leaderboard: sortedPlayers,
+    winningCredits: winner.credits
+  };
+}
+
+// 3. Check if all active players have submitted decisions
+function checkAllPlayersSubmitted(decisions, activePlayers) {
+  // Get list of all commanders (always these 6)
+  const allCommanders = ['Dave', 'Silas', 'Chris', 'Brian', 'Joel', 'Curtis'];
+  
+  // Count how many of the active players have submitted
+  const activePlayerIds = activePlayers.map(p => p.id);
+  const submittedPlayerIds = decisions.map(d => d.playerId);
+  
+  // Check if all active players have submitted
+  const allActiveSubmitted = activePlayerIds.every(id => submittedPlayerIds.includes(id));
+  
+  return {
+    allSubmitted: allActiveSubmitted,
+    submittedCount: submittedPlayerIds.length,
+    activeCount: activePlayerIds.length,
+    totalCommanders: allCommanders.length
+  };
 }
 
 // Initialize database tables
@@ -134,6 +326,7 @@ db.serialize(() => {
       sales TEXT,
       raidTarget TEXT,
       raidMaterial TEXT,
+      blockTarget TEXT,
       submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (playerId) REFERENCES players(id)
     )
@@ -162,6 +355,7 @@ db.serialize(() => {
       resource TEXT,
       amount INTEGER,
       success BOOLEAN,
+      blocked BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -194,7 +388,10 @@ db.serialize(() => {
 
   db.run(`ALTER TABLE players ADD COLUMN protected_resources TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
-      console.error('Error adding protected_resources column:', err);
+      console.error('Database error adding protected_resources column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
@@ -202,23 +399,93 @@ db.serialize(() => {
 
   db.run(`ALTER TABLE players ADD COLUMN last_night_earnings INTEGER DEFAULT 0`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
-      console.error('Error adding last_night_earnings column:', err);
+      console.error('Database error adding last_night_earnings column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Add dump tracking to players table
+  db.run(`ALTER TABLE players ADD COLUMN daily_dump_used TEXT DEFAULT 'none'`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Database error adding daily_dump_used column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Add dump flag to sales tracking
+  db.run(`ALTER TABLE player_sales ADD COLUMN is_dump BOOLEAN DEFAULT FALSE`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Database error adding is_dump column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Add news categorization (FIXED: Removed duplicate)
+  db.run(`ALTER TABLE news ADD COLUMN category TEXT DEFAULT 'general'`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Database error adding category column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  db.run(`ALTER TABLE news ADD COLUMN priority INTEGER DEFAULT 1`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Database error adding priority column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  db.run(`ALTER TABLE decisions ADD COLUMN blockTarget TEXT DEFAULT 'none'`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Database error adding blockTarget column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Add raid_impact column to players table
+  db.run(`ALTER TABLE players ADD COLUMN raid_impact TEXT DEFAULT '{"gained":{},"lost":{}}'`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Database error adding raid_impact column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
   db.run(`ALTER TABLE game_state ADD COLUMN colony_needs_history TEXT DEFAULT '[]'`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
-      console.error('Error adding colony_needs_history column:', err);
+      console.error('Database error adding colony_needs_history column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
   db.run(`ALTER TABLE game_state ADD COLUMN price_history TEXT DEFAULT '[]'`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
-      console.error('Error adding price_history column:', err);
+      console.error('Database error adding price_history column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
   db.run(`ALTER TABLE game_state ADD COLUMN daily_sales_totals TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
-      console.error('Error adding daily_sales_totals column:', err);
+      console.error('Database error adding daily_sales_totals column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
     }
   });
 
@@ -242,7 +509,11 @@ app.post('/login', (req, res) => {
 
   db.get('SELECT * FROM players WHERE name = ?', [name], (err, row) => {
     if (err) {
-      console.error('Database error:', err);
+      console.error('Database error in /login:', {
+        error: err.message,
+        name,
+        timestamp: new Date().toISOString()
+      });
       return res.json({ error: 'Database error' });
     }
 
@@ -269,13 +540,314 @@ app.post('/login', (req, res) => {
         [name, race, pin],
         function(err) {
           if (err) {
-            console.error('Insert error:', err);
+            console.error('Database insert error in /login:', {
+              error: err.message,
+              name,
+              race,
+              timestamp: new Date().toISOString()
+            });
             return res.json({ error: 'Registration failed' });
           }
           res.json({ playerId: this.lastID, race: race });
         }
       );
     }
+  });
+});
+
+// Process day endpoint - handles day advancement and game logic
+app.post('/process-day', (req, res) => {
+  db.get('SELECT * FROM game_state WHERE id = 1', (err, state) => {
+    if (err || !state) {
+      console.error('Game state error in /process-day:', {
+        error: err?.message || 'No game state found',
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ error: 'Game state error' });
+    }
+
+    const currentDay = state.current_day;
+    
+    // Get all players and their decisions for this day
+    db.all('SELECT * FROM players', [], (err, players) => {
+      if (err) {
+        console.error('Players query error in /process-day:', {
+          error: err.message,
+          currentDay,
+          timestamp: new Date().toISOString()
+        });
+        return res.json({ error: 'Failed to get players' });
+      }
+
+      db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, decisions) => {
+        if (err) {
+          console.error('Decisions query error in /process-day:', {
+            error: err.message,
+            currentDay,
+            timestamp: new Date().toISOString()
+          });
+          return res.json({ error: 'Failed to get decisions' });
+        }
+
+        // In practice mode, generate AI decisions for non-Dave players
+        if (PRACTICE_MODE) {
+          console.log('🤖 Practice mode active - generating AI decisions for non-Dave players');
+          
+          players.forEach(player => {
+            if (player.name !== PRACTICE_MODE_PLAYER) {
+              const aiDecisions = generateSimpleAIDecisions(player.name);
+              
+              // Add AI decisions to the decisions array
+              decisions.push({
+                playerId: player.id,
+                day: currentDay,
+                efforts: JSON.stringify(aiDecisions.efforts),
+                sales: JSON.stringify(aiDecisions.sales),
+                raidTarget: aiDecisions.raidTarget,
+                raidMaterial: aiDecisions.raidMaterial,
+                blockTarget: aiDecisions.blockTarget
+              });
+              
+              console.log(`🤖 ${player.name} AI decisions: Mine ${Object.keys(aiDecisions.efforts)[0]}, Sell ${Object.keys(aiDecisions.sales)[0]}`);
+            }
+          });
+        }
+
+        // Process the day using core logic
+        processCoreDayLogic(currentDay, players, decisions, (err, result) => {
+          if (err) {
+            console.error('Error in core day processing:', {
+              error: err.message,
+              currentDay,
+              timestamp: new Date().toISOString()
+            });
+            return res.json({ error: 'Failed to process day: ' + err.message });
+          }
+
+          const { newPrices, tomorrowColonyNeeds, totalSupply, dailySalesTotals, priceHistory, colonyNeedsHistory, news: processedNews } = result;
+
+          // Update game state
+          const newDay = currentDay + 1;
+          
+          // Check if game has ended
+          if (newDay > GAME_CONFIG.GAME_DURATION_DAYS) {
+            console.log('🏆 Game completed! Determining winner...');
+            
+            // Get final standings
+            db.all('SELECT * FROM players ORDER BY credits DESC', [], (err, finalPlayers) => {
+              if (err) {
+                console.error('Error getting final players in /process-day:', {
+                  error: err.message,
+                  newDay,
+                  timestamp: new Date().toISOString()
+                });
+                return res.json({ error: 'Failed to get final standings' });
+              }
+              
+              const winner = finalPlayers[0];
+              const finalStandings = finalPlayers;
+              
+              // Add final news
+              const finalNews = [
+                `🏆 GALACTIC CONQUEST COMPLETE! Winner: ${winner.name} with ${winner.credits}!`,
+                `🥈 Second Place: ${finalStandings[1]?.name || 'None'} with ${finalStandings[1]?.credits || 0}`,
+                `🥉 Third Place: ${finalStandings[2]?.name || 'None'} with ${finalStandings[2]?.credits || 0}`,
+                `📊 Final standings determined after ${GAME_CONFIG.GAME_DURATION_DAYS} days of space conquest!`,
+                `🌌 The galaxy recognizes ${winner.name} as the supreme space commander!`
+              ];
+              
+              const finalNewsPromises = finalNews.map(newsItem => {
+                return new Promise((resolve, reject) => {
+                  db.run('INSERT INTO news (day, message, category, priority) VALUES (?, ?, ?, ?)', 
+                    [currentDay, newsItem, 'general', 3], (err) => {
+                    if (err) reject(err);
+                    else resolve();
+                  });
+                });
+              });
+              
+              Promise.all(finalNewsPromises).then(() => {
+                // Update game state to mark as ended
+                db.run(
+                  `UPDATE game_state SET 
+                   current_day = ?, 
+                   market_prices = ?, 
+                   colony_needs = ?,
+                   last_supply = ?,
+                   daily_sales_totals = ?,
+                   price_history = ?,
+                   colony_needs_history = ?,
+                   last_updated = CURRENT_TIMESTAMP 
+                   WHERE id = 1`,
+                  [
+                    newDay,
+                    JSON.stringify(newPrices), 
+                    JSON.stringify(tomorrowColonyNeeds),
+                    JSON.stringify(totalSupply),
+                    JSON.stringify(dailySalesTotals),
+                    JSON.stringify(priceHistory),
+                    JSON.stringify(colonyNeedsHistory)
+                  ],
+                  (err) => {
+                    if (err) {
+                      console.error('Error updating final game state in /process-day:', {
+                        error: err.message,
+                        newDay,
+                        timestamp: new Date().toISOString()
+                      });
+                      return res.json({ error: 'Failed to update final game state' });
+                    }
+                    
+                    // Clear decisions
+                    db.run('DELETE FROM decisions WHERE day = ?', [currentDay], (err) => {
+                      if (err) {
+                        console.error('Error clearing decisions in /process-day:', {
+                          error: err.message,
+                          currentDay,
+                          timestamp: new Date().toISOString()
+                        });
+                      }
+                      
+                      res.json({ 
+                        success: true, 
+                        message: '🏆 Game Complete! Check final standings!',
+                        gameEnded: true,
+                        winner: winner,
+                        finalStandings: finalStandings,
+                        newDay: newDay
+                      });
+                    });
+                  }
+                );
+              }).catch(err => {
+                console.error('Error saving final news in /process-day:', {
+                  error: err.message,
+                  currentDay,
+                  timestamp: new Date().toISOString()
+                });
+                res.json({ error: 'Failed to save final results' });
+              });
+            });
+          } else {
+            // Game continues normally
+            db.run(
+              `UPDATE game_state SET 
+               current_day = ?, 
+               market_prices = ?, 
+               colony_needs = ?,
+               last_supply = ?,
+               daily_sales_totals = ?,
+               price_history = ?,
+               colony_needs_history = ?,
+               last_updated = CURRENT_TIMESTAMP 
+               WHERE id = 1`,
+              [
+                newDay,
+                JSON.stringify(newPrices), 
+                JSON.stringify(tomorrowColonyNeeds),
+                JSON.stringify(totalSupply),
+                JSON.stringify(dailySalesTotals),
+                JSON.stringify(priceHistory),
+                JSON.stringify(colonyNeedsHistory)
+              ],
+              (err) => {
+                if (err) {
+                  console.error('Error updating game state in /process-day:', {
+                    error: err.message,
+                    newDay,
+                    timestamp: new Date().toISOString()
+                  });
+                  return res.json({ error: 'Failed to update game state' });
+                }
+                
+                // Clear today's decisions
+                db.run('DELETE FROM decisions WHERE day = ?', [currentDay], (err) => {
+                  if (err) {
+                    console.error('Error clearing decisions in /process-day:', {
+                      error: err.message,
+                      currentDay,
+                      timestamp: new Date().toISOString()
+                    });
+                  }
+                  
+                  console.log('✅ Day processed successfully!');
+                  res.json({ 
+                    success: true, 
+                    message: 'Day processed successfully!',
+                    gameEnded: false,
+                    newDay: newDay
+                  });
+                });
+              }
+            );
+          }
+        });
+      });
+    });
+  });
+});
+
+// Submit decisions endpoint
+app.post('/submit-decisions', (req, res) => {
+  const { playerId, day, efforts, sales, raidTarget, raidMaterial, blockTarget } = req.body;
+  
+  if (!playerId || !day) {
+    return res.json({ error: 'Missing required fields' });
+  }
+  
+  // Validate effort points (max 12 total)
+  const totalEffort = Object.values(efforts || {}).reduce((sum, val) => sum + (val || 0), 0);
+  if (totalEffort > GAME_CONFIG.MAX_EFFORT_POINTS) {
+    return res.json({ error: `Total effort cannot exceed ${GAME_CONFIG.MAX_EFFORT_POINTS} points` });
+  }
+  
+  // Check if player already submitted for this day
+  db.get('SELECT id FROM decisions WHERE playerId = ? AND day = ?', [playerId, day], (err, existing) => {
+    if (err) {
+      console.error('Database error checking existing decisions:', {
+        error: err.message,
+        playerId,
+        day,
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ error: 'Database error' });
+    }
+    
+    if (existing) {
+      return res.json({ error: 'You have already submitted decisions for this day' });
+    }
+    
+    // Insert new decision
+    db.run(
+      'INSERT INTO decisions (playerId, day, efforts, sales, raidTarget, raidMaterial, blockTarget) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [
+        playerId,
+        day,
+        JSON.stringify(efforts || {}),
+        JSON.stringify(sales || {}),
+        raidTarget || 'none',
+        raidMaterial || 'none',
+        blockTarget || 'none'
+      ],
+      function(err) {
+        if (err) {
+          console.error('Database error inserting decision:', {
+            error: err.message,
+            playerId,
+            day,
+            timestamp: new Date().toISOString()
+          });
+          return res.json({ error: 'Failed to save decisions' });
+        }
+        
+        console.log(`✅ Decisions submitted for player ${playerId} on day ${day}`);
+        res.json({ 
+          success: true, 
+          message: 'Decisions submitted successfully!',
+          decisionId: this.lastID
+        });
+      }
+    );
   });
 });
 
@@ -286,6 +858,11 @@ app.get('/game-data/:playerId', (req, res) => {
   // Get game state first
   db.get('SELECT * FROM game_state WHERE id = 1', (err, gameState) => {
     if (err || !gameState) {
+      console.error('Game state error in /game-data:', {
+        error: err?.message || 'No game state found',
+        playerId,
+        timestamp: new Date().toISOString()
+      });
       return res.json({ error: 'Game state error' });
     }
 
@@ -294,6 +871,9 @@ app.get('/game-data/:playerId', (req, res) => {
     
     // Get current colony needs for this day
     const currentColonyNeeds = getCurrentColonyNeeds(currentDay);
+
+    // Get tomorrow's colony needs for mining decisions
+    const tomorrowColonyNeeds = getCurrentColonyNeeds(currentDay + 1);
     
     // Get price history
     const priceHistory = JSON.parse(gameState.price_history || '[]');
@@ -305,7 +885,11 @@ app.get('/game-data/:playerId', (req, res) => {
     // Get player data
     db.get('SELECT * FROM players WHERE id = ?', [playerId], (err, player) => {
       if (err || !player) {
-        console.error('Player query error:', err);
+        console.error('Player query error in /game-data:', {
+          error: err?.message || 'Player not found',
+          playerId,
+          timestamp: new Date().toISOString()
+        });
         return res.json({ error: 'Player not found' });
       }
 
@@ -315,98 +899,40 @@ app.get('/game-data/:playerId', (req, res) => {
         [playerId, Math.max(1, currentDay - 1)],
         (err, lastNightSales) => {
           if (err) {
-            console.error('Sales query error:', err);
+            console.error('Sales query error in /game-data:', {
+              error: err.message,
+              playerId,
+              day: Math.max(1, currentDay - 1),
+              timestamp: new Date().toISOString()
+            });
             lastNightSales = [];
           }
 
-          // Get all players for leaderboard
-          db.all('SELECT * FROM players ORDER BY credits DESC', [], (err, allPlayers) => {
-            if (err) allPlayers = [];
+          // Calculate total earned from last night's sales
+          const totalEarned = lastNightSales.reduce((sum, sale) => sum + (sale.total_earned || 0), 0);
 
-            // Get today's raid logs
-            db.all(
-              'SELECT * FROM raid_logs WHERE day = ?',
-              [currentDay],
-              (err, raids) => {
-                if (err) raids = [];
-
-                // Get recent news
-                db.all(
-                  'SELECT message FROM news ORDER BY day DESC, id DESC LIMIT 20',
-                  [],
-                  (err, newsRows) => {
-                    if (err) newsRows = [];
-                    const newsMessages = newsRows.map(row => row.message);
-
-                    // Get player's pending decision
-                    db.get(
-                      'SELECT * FROM decisions WHERE playerId = ? AND day = ?',
-                      [playerId, currentDay],
-                      (err, decision) => {
-                        // Get today's decisions for status checking
-                        db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, todayDecisions) => {
-                          if (err) todayDecisions = [];
-
-                          const leaderboard = allPlayers.map(p => ({
-                            id: p.id,
-                            name: p.name,
-                            race: p.race,
-                            credits: p.credits,
-                            stockpiles: JSON.parse(p.stockpiles || '{}'),
-                            hasSubmitted: todayDecisions.some(d => d.playerId === p.id),
-                            hasPlayed: p.credits > 100 || Object.values(JSON.parse(p.stockpiles || '{}')).some(v => v > 0)
-                          }));
-
-                          // Calculate total stockpiles
-                          const playerStockpiles = JSON.parse(player.stockpiles || '{}');
-                          const protectedResources = JSON.parse(player.protected_resources || '{}');
-                          const totalStockpiles = {};
-                          const allResources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
-                          allResources.forEach(resource => {
-                            totalStockpiles[resource] = (playerStockpiles[resource] || 0) + (protectedResources[resource] || 0);
-                          });
-
-                          const activePlayers = todayDecisions ? todayDecisions.length : 0;
-                          const lastSupply = JSON.parse(gameState.last_supply || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}');
-                          
-                          // Prepare response with both old and new data
-                          const response = {
-                            currentDay,
-                            playerId: player.id,
-                            playerName: player.name,
-                            playerRace: player.race,
-                            credits: player.credits,
-                            stockpiles: playerStockpiles,
-                            protectedResources: protectedResources,
-                            totalStockpiles,
-                            lastEfforts: JSON.parse(player.lastEfforts || '{}'),
-                            prices,
-                            needs: currentColonyNeeds, // Replaces old static needs
-                            lastSupply,
-                            activePlayers,
-                            leaderboard,
-                            news: newsMessages,
-                            efforts: decision ? JSON.parse(decision.efforts || '{}') : {},
-                            sales: decision ? JSON.parse(decision.sales || '{}') : {},
-                            raidTarget: decision ? decision.raidTarget : 'none',
-                            raidMaterial: decision ? decision.raidMaterial : null,
-                            hasSubmitted: !!decision,
-                            lastNightSales: lastNightSales || [],
-                            lastNightEarnings: player.last_night_earnings || 0,
-                            // NEW FIELDS
-                            currentColonyNeeds,
-                            lastDayPrices,
-                            dailySalesTotals,
-                            priceHistory
-                          };
-                          res.json(response);
-                        });
-                      }
-                    );
-                  }
-                );
-              }
-            );
+          res.json({
+            player: {
+              id: player.id,
+              name: player.name,
+              race: player.race,
+              credits: player.credits,
+              stockpiles: JSON.parse(player.stockpiles),
+              protectedResources: JSON.parse(player.protected_resources || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'),
+              lastEfforts: JSON.parse(player.lastEfforts || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'),
+              lastNightEarnings: player.last_night_earnings || 0
+            },
+            gameState: {
+              currentDay: currentDay,
+              prices: prices,
+              colonyNeeds: currentColonyNeeds,
+              tomorrowColonyNeeds: tomorrowColonyNeeds,
+              priceHistory: priceHistory,
+              lastDayPrices: lastDayPrices,
+              dailySalesTotals: dailySalesTotals
+            },
+            lastNightSales: lastNightSales,
+            totalEarned: totalEarned
           });
         }
       );
@@ -414,524 +940,326 @@ app.get('/game-data/:playerId', (req, res) => {
   });
 });
 
-// Submit decisions
-app.post('/submit-decisions', (req, res) => {
-  const { playerId, efforts, sales, raidTarget, raidMaterial } = req.body;
+// Get decisions for a specific day
+app.get('/decisions/:day', (req, res) => {
+  const day = parseInt(req.params.day);
   
-  // Validate effort points (max 10)
-  const totalEffort = Object.values(efforts).reduce((sum, e) => sum + (e || 0), 0);
-  if (totalEffort > 10) {
-    return res.json({ error: 'Too many effort points! Maximum is 10.' });
+  if (!day || day < 1) {
+    return res.json({ error: 'Invalid day parameter' });
   }
-  // Validate sales limits (max 15 per resource)
-  for (const [resource, amount] of Object.entries(sales)) {
-    if ((amount || 0) > 15) {
-      return res.json({ error: `Cannot sell more than 15 ${resource} per day. You tried to sell ${amount}.` });
+  
+  db.all('SELECT * FROM decisions WHERE day = ?', [day], (err, decisions) => {
+    if (err) {
+      console.error('Database error in /decisions:', {
+        error: err.message,
+        day,
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ error: 'Database error' });
     }
-  }
+    
+    res.json({ decisions: decisions });
+  });
+});
 
-  // Get current day
+// Check submission status for all players
+app.get('/submission-status/:day', (req, res) => {
+  const day = parseInt(req.params.day);
+  
+  if (!day || day < 1) {
+    return res.json({ error: 'Invalid day parameter' });
+  }
+  
+  db.all('SELECT * FROM players', [], (err, players) => {
+    if (err) {
+      console.error('Database error in /submission-status:', {
+        error: err.message,
+        day,
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ error: 'Database error' });
+    }
+    
+    db.all('SELECT playerId FROM decisions WHERE day = ?', [day], (err, submittedDecisions) => {
+      if (err) {
+        console.error('Database error checking decisions in /submission-status:', {
+          error: err.message,
+          day,
+          timestamp: new Date().toISOString()
+        });
+        return res.json({ error: 'Database error' });
+      }
+      
+      const submittedPlayerIds = submittedDecisions.map(d => d.playerId);
+      const submissionStatus = checkAllPlayersSubmitted(submittedDecisions, players);
+      
+      res.json({
+        day: day,
+        players: players.map(player => ({
+          id: player.id,
+          name: player.name,
+          hasSubmitted: submittedPlayerIds.includes(player.id)
+        })),
+        submissionStatus: submissionStatus
+      });
+    });
+  });
+});
+
+// 3. ENHANCED NEWS RETRIEVAL ENDPOINT
+app.get('/structured-news/:days?', (req, res) => {
+  const daysToShow = parseInt(req.params.days) || 3; // Default show last 3 days
+  
   db.get('SELECT current_day FROM game_state WHERE id = 1', (err, state) => {
-    if (err || !state) {
-      return res.json({ error: 'Game state error' });
+    if (err) {
+      console.error('Database error in /structured-news:', {
+        error: err.message,
+        daysToShow,
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ error: 'Database error' });
     }
-
+    
     const currentDay = state.current_day;
-
-    // Check if already submitted
-    db.get(
-      'SELECT id FROM decisions WHERE playerId = ? AND day = ?',
-      [playerId, currentDay],
-      (err, existing) => {
-        if (existing) {
-          // Update existing decision
-          db.run(
-            `UPDATE decisions 
-             SET efforts = ?, sales = ?, raidTarget = ?, raidMaterial = ?
-             WHERE playerId = ? AND day = ?`,
-            [
-              JSON.stringify(efforts),
-              JSON.stringify(sales),
-              raidTarget || 'none',
-              raidMaterial || null,
-              playerId,
-              currentDay
-            ],
-            (err) => {
-              if (err) {
-                return res.json({ error: 'Failed to update decision' });
-              }
-              res.json({ success: true, message: 'Decision updated!' });
-            }
-          );
-        } else {
-          // Insert new decision
-          db.run(
-            `INSERT INTO decisions (playerId, day, efforts, sales, raidTarget, raidMaterial)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [
-              playerId,
-              currentDay,
-              JSON.stringify(efforts),
-              JSON.stringify(sales),
-              raidTarget || 'none',
-              raidMaterial || null
-            ],
-            (err) => {
-              if (err) {
-                return res.json({ error: 'Failed to save decision' });
-              }
-              res.json({ success: true, message: 'Decision saved!' });
-            }
-          );
+    const startDay = Math.max(1, currentDay - daysToShow);
+    
+    db.all(
+      `SELECT day, message, category, priority, created_at 
+       FROM news 
+       WHERE day >= ? AND day < ?
+       ORDER BY day DESC, priority DESC, created_at DESC`,
+      [startDay, currentDay],
+      (err, newsRows) => {
+        if (err) {
+          console.error('News query error in /structured-news:', {
+            error: err.message,
+            startDay,
+            currentDay,
+            timestamp: new Date().toISOString()
+          });
+          return res.json({ error: 'Failed to get news' });
         }
+        
+        // Group news by day and category
+        const structuredNews = {};
+        
+        newsRows.forEach(item => {
+          if (!structuredNews[item.day]) {
+            structuredNews[item.day] = {
+              day: item.day,
+              raid: [],
+              mining: [],
+              market: [],
+              general: []
+            };
+          }
+          
+          structuredNews[item.day][item.category].push({
+            message: item.message,
+            priority: item.priority,
+            timestamp: item.created_at
+          });
+        });
+        
+        // Convert to array and sort by day descending
+        const newsArray = Object.values(structuredNews).sort((a, b) => b.day - a.day);
+        
+        res.json({
+          structuredNews: newsArray,
+          currentDay: currentDay,
+          daysShown: daysToShow
+        });
       }
     );
   });
 });
 
-// Process day - complete game logic
-app.post('/process-day', (req, res) => {
-  const { playerId } = req.body;
-  console.log('🚀 Processing day for player:', playerId);
+// 6. NEWS CATEGORY ICONS AND PRIORITIES
+const NEWS_CATEGORIES = {
+  raid: {
+    icon: '⚔️',
+    color: '#ff6666',
+    title: 'Raid Operations'
+  },
+  mining: {
+    icon: '⛏️', 
+    color: '#66ff66',
+    title: 'Mining Reports'
+  },
+  market: {
+    icon: '📈',
+    color: '#ffaa00',
+    title: 'Market Updates'
+  },
+  general: {
+    icon: '📰',
+    color: '#66ccff',
+    title: 'General News'
+  }
+};
 
-  db.get('SELECT * FROM game_state WHERE id = 1', (err, state) => {
+// Export categories for frontend use
+app.get('/news-categories', (req, res) => {
+  res.json(NEWS_CATEGORIES);
+});
+
+// 7. New endpoint: End game and determine winner
+app.post('/end-game', (req, res) => {
+  db.get('SELECT current_day FROM game_state WHERE id = 1', (err, state) => {
     if (err) {
-      console.error('Game state error:', err);
-      return res.json({ error: 'Game state error: ' + err.message });
+      console.error('Database error in /end-game:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ error: 'Database error' });
     }
-    if (!state) {
-      console.error('No game state found');
-      return res.json({ error: 'No game state found' });
-    }
-    try {
-      const currentDay = state.current_day;
-      const prices = JSON.parse(state.market_prices || '{}');
-
-      // Get all players and their decisions
-      db.all('SELECT * FROM players', [], (err, players) => {
+    
+    const currentDay = state.current_day;
+    
+    db.all('SELECT * FROM players ORDER BY credits DESC', [], (err, players) => {
+      if (err) {
+        console.error('Players query error in /end-game:', {
+          error: err.message,
+          currentDay,
+          timestamp: new Date().toISOString()
+        });
+        return res.json({ error: 'Failed to get players' });
+      }
+      
+      const gameResult = determineWinner(players);
+      
+      // Mark game as ended in database (set current_day to exceed max days)
+      db.run('UPDATE game_state SET current_day = ? WHERE id = 1', [GAME_CONFIG.GAME_DURATION_DAYS + 1], (err) => {
         if (err) {
-          return res.json({ error: 'Failed to get players' });
+          console.error('Game state update error in /end-game:', {
+            error: err.message,
+            currentDay,
+            timestamp: new Date().toISOString()
+          });
+          return res.json({ error: 'Failed to end game' });
         }
-        db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, decisions) => {
-          if (err) decisions = [];
-
-          // Map for quick lookup
-          const decisionMap = {};
-          decisions.forEach(d => {
-            decisionMap[d.playerId] = {
-              efforts: JSON.parse(d.efforts || '{}'),
-              sales: JSON.parse(d.sales || '{}'),
-              raidTarget: d.raidTarget,
-              raidMaterial: d.raidMaterial
-            };
-          });
-
-          // 1. Initialize player data with current state
-          const playerData = {};
-          const news = [];
-          players.forEach(player => {
-            const decision = decisionMap[player.id] || { efforts: {}, sales: {}, raidTarget: 'none' };
-            playerData[player.id] = {
-              ...player,
-              stockpiles: JSON.parse(player.stockpiles || '{}'),
-              protectedResources: JSON.parse(player.protected_resources || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'),
-              credits: player.credits,
-              lastEfforts: decision.efforts,
-              sales: decision.sales,
-              raidTarget: decision.raidTarget,
-              raidMaterial: decision.raidMaterial
-            };
-          });
-
-          // STEP 1: MINING - Add mined resources to stockpiles
-          // console.log('Step 1: Mining');
-          const totalSupply = { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
-
-          players.forEach(player => {
-            const pdata = playerData[player.id];
-            // Merge protected resources into main stockpile (from previous day)
-            Object.keys(pdata.protectedResources).forEach(resource => {
-              pdata.stockpiles[resource] = (pdata.stockpiles[resource] || 0) + (pdata.protectedResources[resource] || 0);
+        
+        // Add final news
+        const finalNews = [
+          `🏆 GAME COMPLETE! Winner: ${gameResult.winner.name} with ${gameResult.winningCredits}!`,
+          `🥈 Second Place: ${gameResult.leaderboard[1]?.name} with ${gameResult.leaderboard[1]?.credits || 0}`,
+          `🥉 Third Place: ${gameResult.leaderboard[2]?.name} with ${gameResult.leaderboard[2]?.credits || 0}`
+        ];
+        
+        const newsPromises = finalNews.map(newsItem => {
+          return new Promise((resolve, reject) => {
+            db.run('INSERT INTO news (day, message) VALUES (?, ?)', [currentDay, newsItem], (err) => {
+              if (err) reject(err);
+              else resolve();
             });
-            pdata.protectedResources = { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
-            // Add mined resources
-            Object.keys(pdata.lastEfforts).forEach(resource => {
-              const mined = pdata.lastEfforts[resource] || 0;
-              pdata.stockpiles[resource] = (pdata.stockpiles[resource] || 0) + mined;
-              totalSupply[resource] += mined;
-            });
-          });
-          
-          // STEP 1.5: AUTO-ASSIGN RESOURCES FOR ABSENT PLAYERS
-
-          players.forEach(player => {
-            const pdata = playerData[player.id];
-            const hasSubmitted = decisionMap[player.id] && Object.keys(decisionMap[player.id].efforts).length > 0;
-            
-            if (!hasSubmitted) {
-              // Generate AI decisions for non-Dave players in practice mode
-              if (PRACTICE_MODE && player.name !== PRACTICE_MODE_PLAYER) {
-                const aiDecisions = generateSimpleAIDecisions(player.name, pdata.stockpiles);
-                
-                if (aiDecisions) {
-                  // Apply AI mining decisions
-                  Object.keys(aiDecisions.efforts).forEach(resource => {
-                    const mined = aiDecisions.efforts[resource] || 0;
-                    pdata.stockpiles[resource] = (pdata.stockpiles[resource] || 0) + mined;
-                    totalSupply[resource] += mined;
-                  });
-                  
-                  // Store AI decisions for processing
-                  pdata.lastEfforts = aiDecisions.efforts;
-                  pdata.sales = aiDecisions.sales;
-                  pdata.raidTarget = aiDecisions.raidTarget;
-                  pdata.raidMaterial = aiDecisions.raidMaterial;
-                  
-                  // Add AI decisions to the decisions array so they get processed
-                  decisions.push({
-                    playerId: player.id,
-                    day: currentDay,
-                    efforts: JSON.stringify(aiDecisions.efforts),
-                    sales: JSON.stringify(aiDecisions.sales),
-                    raidTarget: aiDecisions.raidTarget,
-                    raidMaterial: aiDecisions.raidMaterial
-                  });
-                  
-                  // Add news message about AI behavior
-                  const totalMined = Object.values(aiDecisions.efforts).reduce((a, b) => a + b, 0);
-                  news.push(`${player.name} AI: ${totalMined} robot deployed, 1 resource sold`);
-                } else {
-                  // Fallback to simple mining if AI fails
-                  pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
-                  pdata.stockpiles.blueGems = (pdata.stockpiles.blueGems || 0) + 1;
-                  pdata.stockpiles.redRubies = (pdata.stockpiles.redRubies || 0) + 1;
-                  pdata.stockpiles.greenPoison = (pdata.stockpiles.greenPoison || 0) + 1;
-                  
-                  pdata.lastEfforts = {
-                    whiteDiamonds: 2,
-                    redRubies: 1,
-                    blueGems: 1,
-                    greenPoison: 1
-                  };
-                  
-                  totalSupply.whiteDiamonds += 2;
-                  totalSupply.redRubies += 1;
-                  totalSupply.blueGems += 1;
-                  totalSupply.greenPoison += 1;
-                  
-                  news.push(`${player.name} was auto-assigned: 2💎 1🔻 1🔷 1🌱 (fallback)`);
-                }
-              } else if (player.name === PRACTICE_MODE_PLAYER) {
-                // Dave gets simple fallback if no decisions submitted
-                pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
-                pdata.stockpiles.blueGems = (pdata.stockpiles.blueGems || 0) + 1;
-                pdata.stockpiles.redRubies = (pdata.stockpiles.redRubies || 0) + 1;
-                pdata.stockpiles.greenPoison = (pdata.stockpiles.greenPoison || 0) + 1;
-                
-                pdata.lastEfforts = {
-                  whiteDiamonds: 2,
-                  redRubies: 1,
-                  blueGems: 1,
-                  greenPoison: 1
-                };
-                
-                totalSupply.whiteDiamonds += 2;
-                totalSupply.redRubies += 1;
-                totalSupply.blueGems += 1;
-                totalSupply.greenPoison += 1;
-                
-                news.push(`${player.name} was auto-assigned: 2💎 1🔻 1🔷 1🌱 (fallback)`);
-              } else {
-                // Non-practice mode players get simple fallback
-                pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
-                pdata.stockpiles.blueGems = (pdata.stockpiles.blueGems || 0) + 1;
-                pdata.stockpiles.redRubies = (pdata.stockpiles.redRubies || 0) + 1;
-                pdata.stockpiles.greenPoison = (pdata.stockpiles.greenPoison || 0) + 1;
-                
-                pdata.lastEfforts = {
-                  whiteDiamonds: 2,
-                  redRubies: 1,
-                  blueGems: 1,
-                  greenPoison: 1
-                };
-                
-                totalSupply.whiteDiamonds += 2;
-                totalSupply.redRubies += 1;
-                totalSupply.blueGems += 1;
-                totalSupply.greenPoison += 1;
-                
-                news.push(`${player.name} was auto-assigned: 2💎 1🔻 1🔷 1🌱 (normal mode)`);
-              }
-            }
           });
         });
-
-        // 2. Process raids BEFORE sales
-        // For each target/resource, collect all raiders
-        const raidResults = [];
-
-        // Group raids by target and resource
-        const raidGroups = {};
-          decisions.forEach(d => {
-            if (d.raidTarget && d.raidTarget !== 'none' && d.raidMaterial) {
-              const target = players.find(p => p.name === d.raidTarget);
-              const attacker = players.find(p => p.id === d.playerId);
-              
-              if (!target) {
-                // Target doesn't exist - report failed raid
-                news.push(`${attacker.name} failed raiding ${getResourceIcon(d.raidMaterial)} from ${d.raidTarget} - target not found`);
-                raidResults.push({
-                  day: currentDay,
-                  attacker_id: d.playerId,
-                  attacker_name: attacker.name,
-                  target_id: null,
-                  target_name: d.raidTarget,
-                  resource: d.raidMaterial,
-                  amount: 0,
-                  success: false
-                });
-              } else if (target.id === d.playerId) {
-                // Trying to raid themselves - report failed raid
-                news.push(`${attacker.name} failed raiding ${getResourceIcon(d.raidMaterial)} from themselves - cannot raid yourself`);
-                raidResults.push({
-                  day: currentDay,
-                  attacker_id: d.playerId,
-                  attacker_name: attacker.name,
-                  target_id: target.id,
-                  target_name: target.name,
-                  resource: d.raidMaterial,
-                  amount: 0,
-                  success: false
-                });
-              } else {
-                // Valid raid - add to groups for processing
-                if (!raidGroups[target.id]) raidGroups[target.id] = {};
-                if (!raidGroups[target.id][d.raidMaterial]) raidGroups[target.id][d.raidMaterial] = [];
-                raidGroups[target.id][d.raidMaterial].push(d.playerId);
-              }
-            }
+        
+        Promise.all(newsPromises).then(() => {
+          res.json({
+            success: true,
+            gameEnded: true,
+            winner: gameResult.winner,
+            finalStandings: gameResult.leaderboard
           });
+        }).catch(err => {
+          console.error('Error saving final news in /end-game:', {
+            error: err.message,
+            currentDay,
+            timestamp: new Date().toISOString()
+          });
+          res.json({ error: 'Failed to save final results' });
+        });
+      });
+    });
+  });
+});
 
-          // Process each raid group
-          Object.entries(raidGroups).forEach(([targetId, resources]) => {
-            targetId = parseInt(targetId);
-            const targetData = playerData[targetId];
-            Object.entries(resources).forEach(([resource, attackerIds]) => {
-              // Filter attackers who have enough Green Poison
-              const validAttackers = [];
-              const invalidAttackers = [];
-              
-              attackerIds.forEach(attackerId => {
-                if ((playerData[attackerId].stockpiles.greenPoison || 0) >= 2) {
-                  validAttackers.push(attackerId);
-                } else {
-                  invalidAttackers.push(attackerId);
-                }
+// 8. Auto-advance checking with timeout
+let autoAdvanceTimeout = null;
+
+function scheduleAutoAdvance(currentDay) {
+  // Clear existing timeout
+  if (autoAdvanceTimeout) {
+    clearTimeout(autoAdvanceTimeout);
+  }
+  
+  // Set 5-minute timer for auto-advance check
+  autoAdvanceTimeout = setTimeout(() => {
+    checkAndAutoAdvance(currentDay);
+  }, 5 * 60 * 1000); // 5 minutes
+}
+
+function checkAndAutoAdvance(currentDay) {
+  db.all('SELECT * FROM players WHERE credits > 0 OR EXISTS (SELECT 1 FROM decisions WHERE playerId = players.id)', [], (err, activePlayers) => {
+    if (err) {
+      console.error('Error checking active players for auto-advance:', {
+        error: err.message,
+        currentDay,
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
+    
+    db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, decisions) => {
+      if (err) {
+        console.error('Error checking decisions for auto-advance:', {
+          error: err.message,
+          currentDay,
+          timestamp: new Date().toISOString()
+        });
+        return;
+      }
+      
+      const submissionStatus = checkAllPlayersSubmitted(decisions, activePlayers);
+      
+      if (submissionStatus.allSubmitted && submissionStatus.activeCount >= 2) {
+        console.log(`🤖 Auto-advancing day ${currentDay} - all ${submissionStatus.activeCount} active players submitted`);
+        
+        // Auto-process the day by calling the core logic
+        db.get('SELECT * FROM game_state WHERE id = 1', (err, state) => {
+          if (err || !state) {
+            console.error('Auto-advance: Game state error or not found:', {
+              error: err?.message || 'No state found',
+              currentDay,
+              timestamp: new Date().toISOString()
+            });
+            return;
+          }
+          const actualCurrentDay = state.current_day; // Get the most current day from DB
+
+          if (actualCurrentDay !== currentDay) {
+            console.log(`Auto-advance: Day already advanced from ${currentDay} to ${actualCurrentDay}. Skipping.`);
+            return;
+          }
+
+          db.all('SELECT * FROM players', [], (err, playersForProcess) => {
+            if (err) {
+              console.error('Auto-advance: Failed to get players for processing:', {
+                error: err.message,
+                currentDay,
+                timestamp: new Date().toISOString()
               });
-              
-              // Log failed raids for attackers without enough Green Poison
-              invalidAttackers.forEach(attackerId => {
-                const attackerName = playerData[attackerId].name;
-                const targetName = targetData.name;
-                news.push(`${attackerName} failed raiding ${getResourceIcon(resource)} from ${targetName} - not enough ${getResourceIcon('greenPoison')}`);
-                raidResults.push({
-                  day: currentDay,
-                  attacker_id: attackerId,
-                  attacker_name: attackerName,
-                  target_id: targetId,
-                  target_name: targetName,
-                  resource,
-                  amount: 0,
-                  success: false
+              return;
+            }
+            processCoreDayLogic(actualCurrentDay, playersForProcess, decisions, (err, result) => {
+              if (err) {
+                console.error('Auto-advance: Error during core day processing:', {
+                  error: err,
+                  currentDay: actualCurrentDay,
+                  timestamp: new Date().toISOString()
                 });
-              });
-              
-              // If no valid attackers, we're done with this raid group
-              if (validAttackers.length === 0) {
                 return;
               }
-              
-              // Remove 2 Green Poison from each valid attacker
-              validAttackers.forEach(attackerId => {
-                playerData[attackerId].stockpiles.greenPoison -= 2;
-              });
-              
-              // Calculate loot
-              const targetStock = targetData.stockpiles[resource] || 0;
-              const totalLootDemanded = 2 * validAttackers.length;
-              const actualLoot = Math.min(totalLootDemanded, targetStock);
-              const lootPerRaider = Math.floor(actualLoot / validAttackers.length);
-              const lootRemainder = actualLoot % validAttackers.length;
-              
-              // Remove loot from target
-              targetData.stockpiles[resource] = Math.max(0, targetStock - actualLoot);
-              
-              // Distribute loot to raiders (goes to protected resources)
-              validAttackers.forEach(attackerId => {
-                const attackerName = playerData[attackerId].name;
-                const targetName = targetData.name;
-                if (lootPerRaider > 0) {
-                  playerData[attackerId].protectedResources[resource] = (playerData[attackerId].protectedResources[resource] || 0) + lootPerRaider;
-                  news.push(`${attackerName} raided ${lootPerRaider} ${getResourceIcon(resource)} from ${targetName}`);
-                } else {
-                  news.push(`${attackerName} failed raiding ${getResourceIcon(resource)} from ${targetName}`);
-                }
-                raidResults.push({
-                  day: currentDay,
-                  attacker_id: attackerId,
-                  attacker_name: attackerName,
-                  target_id: targetId,
-                  target_name: targetName,
-                  resource,
-                  amount: lootPerRaider,
-                  success: lootPerRaider > 0
-                });
-              });
-              
-              // Note lost remainder
-              if (lootRemainder > 0) {
-                news.push(`${lootRemainder} ${getResourceIcon(resource)} lost in raid chaos on ${targetData.name}`);
-              }
-            });
-          });
 
-          // STEP 3: Calculate daily sales totals
-          const dailySalesTotals = { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
+              const { newPrices, tomorrowColonyNeeds, totalSupply, dailySalesTotals, priceHistory, colonyNeedsHistory, news: processedNews } = result;
 
-          Object.values(playerData).forEach(pdata => {
-            Object.keys(pdata.sales).forEach(resource => {
-              const sellAmount = Math.min(pdata.sales[resource] || 0, pdata.stockpiles[resource] || 0);
-              dailySalesTotals[resource] += sellAmount;
-            });
-          });
-
-          // STEP 4: Calculate new prices based on sales (not mining)
-          const currentColonyNeeds = getCurrentColonyNeeds(currentDay);
-          const currentPrices = JSON.parse(state.market_prices);
-          const newPrices = calculateSellingBasedPrices(dailySalesTotals, currentColonyNeeds, currentPrices);
-
-          // STEP 5: Get tomorrow's colony needs
-          const tomorrowColonyNeeds = getCurrentColonyNeeds(currentDay + 1);
-
-          // STEP 6: Update price and colony needs history
-          const priceHistory = JSON.parse(state.price_history || '[]');
-          priceHistory.push({
-            day: currentDay,
-            ...currentPrices
-          });
-          if (priceHistory.length > 10) priceHistory.shift();
-
-          const colonyNeedsHistory = JSON.parse(state.colony_needs_history || '[]');
-          colonyNeedsHistory.push({
-            day: currentDay,
-            ...currentColonyNeeds
-          });
-          if (colonyNeedsHistory.length > 10) colonyNeedsHistory.shift();
-
-          // STEP 7: Process sales at NEW market prices
-          const playerSalesData = {}; // Track sales per player
-
-          players.forEach(player => {
-            const pdata = playerData[player.id];
-            let totalEarnings = 0;
-            playerSalesData[player.id] = [];
-
-            Object.keys(pdata.sales).forEach(resource => {
-              const sellAmount = Math.min(pdata.sales[resource] || 0, pdata.stockpiles[resource] || 0);
-              if (sellAmount > 0) {
-                const pricePerUnit = newPrices[resource] || 10; // Use NEW prices, not old prices
-                const earnings = sellAmount * pricePerUnit;
-                totalEarnings += earnings;
-                pdata.credits += earnings;
-                pdata.stockpiles[resource] -= sellAmount;
-                // Record individual sale
-                playerSalesData[player.id].push({
-                  resource,
-                  quantity: sellAmount,
-                  pricePerUnit,
-                  totalEarned: earnings
-                });
-              }
-            });
-            pdata.last_night_earnings = totalEarnings;
-          });
-
-          // 4. Update all players in database
-          const updatePromises = Object.values(playerData).map(pdata => {
-            return new Promise((resolve, reject) => {
-              db.run(
-                'UPDATE players SET stockpiles = ?, protected_resources = ?, credits = ?, lastEfforts = ?, last_night_earnings = ? WHERE id = ?',
-                [
-                  JSON.stringify(pdata.stockpiles), 
-                  JSON.stringify(pdata.protectedResources), 
-                  pdata.credits, 
-                  JSON.stringify(pdata.lastEfforts),
-                  pdata.last_night_earnings || 0,
-                  pdata.id
-                ],
-                (err) => {
-                  if (err) reject(err);
-                  else resolve();
-                }
-              );
-            });
-          });
-
-          // 5. Save raid logs
-          const raidPromises = raidResults.map(raid => {
-            return new Promise((resolve, reject) => {
-              db.run(
-                `INSERT INTO raid_logs (day, attacker_id, attacker_name, target_id, target_name, resource, amount, success)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [raid.day, raid.attacker_id, raid.attacker_name, raid.target_id, raid.target_name, raid.resource, raid.amount, raid.success],
-                (err) => {
-                  if (err) reject(err);
-                  else resolve();
-                }
-              );
-            });
-          });
-
-          // Save individual sales data
-          const salesPromises = Object.entries(playerSalesData).flatMap(([playerId, sales]) => {
-            return sales.map(sale => {
-              return new Promise((resolve, reject) => {
-                db.run(
-                  `INSERT INTO player_sales (playerId, day, resource, quantity, price_per_unit, total_earned)
-                   VALUES (?, ?, ?, ?, ?, ?)`,
-                  [playerId, currentDay, sale.resource, sale.quantity, sale.pricePerUnit, sale.totalEarned],
-                  (err) => {
-                    if (err) reject(err);
-                    else resolve();
-                  }
-                );
-              });
-            });
-          });
-
-          // Save news to database
-          const newsPromises = news.map(newsItem => {
-            return new Promise((resolve, reject) => {
-              db.run(
-                'INSERT INTO news (day, message) VALUES (?, ?)',
-                [currentDay, newsItem],
-                (err) => {
-                  if (err) reject(err);
-                  else resolve();
-                }
-              );
-            });
-          });
-
-          Promise.all([...updatePromises, ...raidPromises, ...newsPromises, ...salesPromises])
-            .then(() => {
-              // Update market prices and game state
               db.run(
                 `UPDATE game_state SET 
                  current_day = current_day + 1, 
                  market_prices = ?, 
                  colony_needs = ?,
+                 last_supply = ?,
                  daily_sales_totals = ?,
                  price_history = ?,
                  colony_needs_history = ?,
@@ -940,48 +1268,60 @@ app.post('/process-day', (req, res) => {
                 [
                   JSON.stringify(newPrices), 
                   JSON.stringify(tomorrowColonyNeeds),
+                  JSON.stringify(totalSupply),
                   JSON.stringify(dailySalesTotals),
                   JSON.stringify(priceHistory),
                   JSON.stringify(colonyNeedsHistory)
                 ],
                 (err) => {
                   if (err) {
-                    console.error('Error updating game state:', err);
-                    return res.json({ error: 'Failed to update game state' });
-                  }
-                  // Clear today's decisions
-                  db.run('DELETE FROM decisions WHERE day = ?', [currentDay], (err) => {
-                    if (err) {
-                      console.error('Error clearing decisions:', err);
-                    }
-                    res.json({ 
-                      success: true, 
-                      message: 'Day processed successfully!',
-                      newDay: currentDay + 1,
-                      news: news,
-                      newPrices,
-                      activePlayers: players.length,
-                      adjustedNeeds: tomorrowColonyNeeds,
-                      totalSupply: dailySalesTotals
+                    console.error('Auto-advance: Error updating game state:', {
+                      error: err.message,
+                      currentDay: actualCurrentDay,
+                      timestamp: new Date().toISOString()
                     });
+                    return;
+                  }
+                  db.run('DELETE FROM decisions WHERE day = ?', [actualCurrentDay], (err) => {
+                    if (err) {
+                      console.error('Auto-advance: Error clearing decisions:', {
+                        error: err.message,
+                        day: actualCurrentDay,
+                        timestamp: new Date().toISOString()
+                      });
+                    }
+                    console.log(`Auto-advance: Day ${actualCurrentDay} successfully processed to Day ${actualCurrentDay + 1}.`);
+                    // Add news about auto-advance using the categorized function
+                    addGeneralNews(actualCurrentDay, `Day ${actualCurrentDay} auto-advanced due to all active players submitting.`, 1)
+                      .catch(newsErr => {
+                        console.error('Auto-advance: Error adding news:', {
+                          error: newsErr.message,
+                          day: actualCurrentDay,
+                          timestamp: new Date().toISOString()
+                        });
+                      });
                   });
                 }
               );
-            })
-            .catch(err => {
-              console.error('Error processing day:', err);
-              res.json({ error: 'Failed to process day: ' + err.message });
             });
+          });
         });
-      });
-    }
+      } else {
+        console.log(`Auto-advance: Not all active players submitted for day ${currentDay}. Submitted: ${submissionStatus.submittedCount}/${submissionStatus.activeCount}`);
+      }
+    });
   });
-} catch (error) {
-      console.error('Processing error:', error);
-      console.error('Error stack:', error.stack);
-      res.json({ error: 'Processing failed: ' + error.message });
-    }
-  });
+}
+
+// Initial call to schedule auto-advance when server starts (for the current day)
+db.get('SELECT current_day FROM game_state WHERE id = 1', (err, state) => {
+  if (!err && state) {
+    console.log(`📅 Game currently on day ${state.current_day}`);
+    // Comment out auto-advance for now until we test day processing
+    // scheduleAutoAdvance(state.current_day);
+  } else {
+    console.log('⚠️ Could not load game state for auto-advance scheduling');
+  }
 });
 
 // Reset game endpoint
@@ -991,40 +1331,87 @@ app.post('/reset-game', (req, res) => {
   db.serialize(() => {
     // Clear all data
     db.run('DELETE FROM players', (err) => {
-      if (err) console.error('Error clearing players:', err);
+      if (err) {
+        console.error('Error clearing players in /reset-game:', {
+          error: err.message,
+          timestamp: new Date().toISOString()
+        });
+      }
     });
     
     db.run('DELETE FROM decisions', (err) => {
-      if (err) console.error('Error clearing decisions:', err);
+      if (err) {
+        console.error('Error clearing decisions in /reset-game:', {
+          error: err.message,
+          timestamp: new Date().toISOString()
+        });
+      }
     });
     
     db.run('DELETE FROM raid_logs', (err) => {
-      if (err) console.error('Error clearing raid logs:', err);
+      if (err) {
+        console.error('Error clearing raid logs in /reset-game:', {
+          error: err.message,
+          timestamp: new Date().toISOString()
+        });
+      }
     });
     
     db.run('DELETE FROM news', (err) => {
-      if (err) console.error('Error clearing news:', err);
+      if (err) {
+        console.error('Error clearing news in /reset-game:', {
+          error: err.message,
+          timestamp: new Date().toISOString()
+        });
+      }
     });
     
     db.run('DELETE FROM player_sales', (err) => {
-      if (err) console.error('Error clearing sales:', err);
+      if (err) {
+        console.error('Error clearing sales in /reset-game:', {
+          error: err.message,
+          timestamp: new Date().toISOString()
+        });
+      }
     });
     
-    // Reset game state
+    // Reset game state to Day 1 with correct starting colony needs
     db.run(`UPDATE game_state SET 
       current_day = 1,
       market_prices = '{"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}',
+      colony_needs = '{"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}',
       last_supply = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      daily_sales_totals = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      price_history = '[{"day":1,"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}]',
+      colony_needs_history = '[{"day":1,"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}]',
       active_players = 0,
       last_updated = CURRENT_TIMESTAMP
       WHERE id = 1`, (err) => {
       if (err) {
-        console.error('Error resetting game state:', err);
+        console.error('Error resetting game state in /reset-game:', {
+          error: err.message,
+          timestamp: new Date().toISOString()
+        });
         return res.json({ error: 'Failed to reset game state' });
       }
       
-      console.log('✅ Game reset complete!');
-      res.json({ success: true, message: 'Game reset successfully!' });
+      // Add welcome news for new game
+      db.run('INSERT INTO news (day, message, category, priority) VALUES (?, ?, ?, ?)', 
+        [1, `🚀 New ${GAME_CONFIG.GAME_DURATION_DAYS}-day galactic conquest begins! May the best commander win!`, 'general', 3], (err) => {
+        if (err) {
+          console.error('Error adding welcome news in /reset-game:', {
+            error: err.message,
+            timestamp: new Date().toISOString()
+          });
+        }
+        
+        console.log(`✅ Game reset complete - New ${GAME_CONFIG.GAME_DURATION_DAYS}-day conquest ready!`);
+        res.json({ 
+          success: true, 
+          message: `New ${GAME_CONFIG.GAME_DURATION_DAYS}-day galactic conquest started!`,
+          resetToDay: 1
+        });
+      });
     });
   });
 });
@@ -1033,8 +1420,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Space Tribes server running on port ${PORT}`);
   console.log(`🌐 Open http://localhost:${PORT} to play!`);
-  if (PRACTICE_MODE) {
-    console.log(`🎯 PRACTICE MODE ACTIVE - ${PRACTICE_MODE_PLAYER} will face AI opponents!`);
-    console.log(`🤖 AI Tribes: Silas (Aggressive), Chris (Conservative), Brian (Balanced), Joel (Specialist), Curtis (Opportunistic)`);
-  }
+  console.log(`💰 ${GAME_CONFIG.DUMP_PRICE} Dump Safety Net loaded!`);
+  console.log(`📰 Structured Daily News system loaded!`);
+  console.log(`⚙️ Game configured for ${GAME_CONFIG.GAME_DURATION_DAYS} days, max ${GAME_CONFIG.MAX_EFFORT_POINTS} effort points`);
 });
