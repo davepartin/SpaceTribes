@@ -1512,6 +1512,7 @@
             <button class="admin-btn reset-btn" onclick="resetGame()">💀 RESET GAME</button>
             <button class="admin-btn debug-btn" onclick="clearSubmissionStatus()">🔧 CLEAR FRONTEND STATUS</button>
             <button class="admin-btn debug-btn" onclick="clearServerDecisions()">🗑️ CLEAR SERVER DECISIONS</button>
+            <button class="admin-btn nuclear-btn" onclick="forceClearAllDecisions()">💥 FORCE CLEAR ALL DECISIONS</button>
           </div>
         </div>
     </div>
@@ -1639,6 +1640,30 @@
                 .catch(err => {
                     console.error('Error clearing server decisions:', err);
                     showMessage('Failed to clear server decisions', 'error');
+                });
+        }
+        
+        // Function to force clear ALL decisions (nuclear option)
+        function forceClearAllDecisions() {
+            if (!confirm('This will clear ALL decisions for ALL players for the current day. Continue?')) {
+                return;
+            }
+            
+            const currentDay = gameData?.gameState?.currentDay || 1;
+            
+            fetch(`/force-clear-decisions/${currentDay}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        showMessage(`ALL decisions for day ${currentDay} force cleared! You can now submit new decisions.`, 'success');
+                        updateSubmitButton();
+                    } else {
+                        showMessage(data.error || 'Failed to force clear decisions', 'error');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error force clearing decisions:', err);
+                    showMessage('Failed to force clear decisions', 'error');
                 });
         }
 

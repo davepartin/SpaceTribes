@@ -814,6 +814,49 @@ app.post('/clear-decisions/:day', (req, res) => {
   });
 });
 
+// Force clear ALL decisions for a specific day (nuclear option)
+app.post('/force-clear-decisions/:day', (req, res) => {
+  const day = parseInt(req.params.day);
+  
+  if (!day || day < 1) {
+    return res.json({ error: 'Invalid day parameter' });
+  }
+  
+  // First, let's see what we're clearing
+  db.all('SELECT * FROM decisions WHERE day = ?', [day], (err, existingDecisions) => {
+    if (err) {
+      console.error('Database error checking existing decisions:', {
+        error: err.message,
+        day,
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ error: 'Database error checking decisions' });
+    }
+    
+    console.log(`🔍 Found ${existingDecisions.length} decisions for day ${day}:`, existingDecisions);
+    
+    // Now clear them all
+    db.run('DELETE FROM decisions WHERE day = ?', [day], function(err) {
+      if (err) {
+        console.error('Database error force clearing decisions:', {
+          error: err.message,
+          day,
+          timestamp: new Date().toISOString()
+        });
+        return res.json({ error: 'Database error clearing decisions' });
+      }
+      
+      console.log(`💥 Force cleared ${this.changes} decisions for day ${day}`);
+      res.json({ 
+        success: true, 
+        message: `Force cleared ${this.changes} decisions for day ${day}`,
+        changes: this.changes,
+        clearedDecisions: existingDecisions
+      });
+    });
+  });
+});
+
 // Submit decisions endpoint
 app.post('/submit-decisions', (req, res) => {
   const { playerId, day, efforts, sales, raidTarget, raidMaterial, blockTarget } = req.body;
