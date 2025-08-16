@@ -1810,26 +1810,28 @@
 
         // New function to update player-specific header info
         function updatePlayerStatus() {
+            if (!gameData || !gameData.player) return;
+            
             const currentDayElement = document.getElementById('currentDay');
-            if (currentDayElement) currentDayElement.textContent = gameData.currentDay;
+            if (currentDayElement) currentDayElement.textContent = gameData.gameState?.currentDay || '?';
 
             const playerCreditsElement = document.getElementById('playerCredits');
-            if (playerCreditsElement) playerCreditsElement.textContent = gameData.credits;
+            if (playerCreditsElement) playerCreditsElement.textContent = gameData.player?.credits || 0;
 
             const playerRaceElement = document.getElementById('playerRace');
-            if (playerRaceElement) playerRaceElement.textContent = gameData.playerRace;
+            if (playerRaceElement) playerRaceElement.textContent = gameData.player?.race || 'Unknown';
 
             const playerCommanderElement = document.getElementById('playerCommander');
-            if (playerCommanderElement) playerCommanderElement.textContent = gameData.playerName;
+            if (playerCommanderElement) playerCommanderElement.textContent = gameData.player?.name || 'Unknown';
 
             const tribeNameElement = document.getElementById('tribeName');
-            if (tribeNameElement) tribeNameElement.textContent = gameData.playerRace; // Assuming tribeName is playerRace
+            if (tribeNameElement) tribeNameElement.textContent = gameData.player?.race || 'Unknown';
 
             // Update player icon based on race/name if needed
             const playerIconElement = document.getElementById('playerIcon');
             if (playerIconElement) {
                 // Example: Set icon based on race or name
-                switch (gameData.playerName) {
+                switch (gameData.player?.name) {
                     case 'Dave': playerIconElement.textContent = '🐻'; break;
                     case 'Silas': playerIconElement.textContent = '🦊'; break;
                     case 'Chris': playerIconElement.textContent = '🐺'; break;
@@ -1848,7 +1850,7 @@
             
             if (!submitBtn || !gameData) return;
             
-        const currentDay = gameData.currentDay || '?';
+        const currentDay = gameData.gameState?.currentDay || '?';
             if (submitDaySpan) submitDaySpan.textContent = currentDay;
             
         if (gameData.hasSubmitted) {
@@ -1867,7 +1869,7 @@
             const adminSection = document.getElementById('adminSection'); // Changed to getElementById
             if (adminSection) {
                 // Example: Only show admin section for 'Dave'
-                if (gameData.playerName === 'Dave') {
+                if (gameData.player?.name === 'Dave') {
                     adminSection.style.display = 'block';
                 } else {
                     adminSection.style.display = 'none';
@@ -1889,15 +1891,15 @@
             });
             
             // Update selling buttons
-            if (gameData && gameData.stockpiles) {
+            if (gameData && gameData.player?.stockpiles) {
                 Object.keys(sellAssignments).forEach(resource => {
                     const sellMinus = document.querySelector(`[onclick="adjustSell('${resource}', -1)"]`);
                     const sellPlus = document.querySelector(`[onclick="adjustSell('${resource}', 1)"]`);
                     
                     if (sellMinus) sellMinus.disabled = sellAssignments[resource] === 0;
                     if (sellPlus) {
-          const available = gameData.stockpiles[resource] || 0;
-                        const protectedRes = gameData.protectedResources[resource] || 0;
+          const available = gameData.player.stockpiles[resource] || 0;
+                        const protectedRes = gameData.player.protectedResources?.[resource] || 0;
                         const maxSell = Math.min(available + protectedRes, 15); // Max 15 or what's available
                         sellPlus.disabled = sellAssignments[resource] >= maxSell;
                     }
@@ -1911,29 +1913,29 @@
             
             // Update day numbers and colony needs
             const sellDayNumberElement = document.getElementById('sellDayNumber');
-            if (sellDayNumberElement) sellDayNumberElement.textContent = gameData.currentDay || '?';
+            if (sellDayNumberElement) sellDayNumberElement.textContent = gameData.gameState?.currentDay || '?';
             const miningDayNumberElement = document.getElementById('miningDayNumber');
-            if (miningDayNumberElement) miningDayNumberElement.textContent = (gameData.currentDay + 1) || '?'; // Corrected to currentDay + 1
+            if (miningDayNumberElement) miningDayNumberElement.textContent = (gameData.gameState?.currentDay || 0) + 1;
 
             // Update selling section with current day colony needs
-            if (gameData.currentColonyNeeds) {
+            if (gameData.gameState?.colonyNeeds) {
               const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
               resources.forEach(resource => {
                 const sellDayElement = document.getElementById(`sell-day-${resource}`);
-                if (sellDayElement) sellDayElement.textContent = gameData.currentDay || '?';
+                if (sellDayElement) sellDayElement.textContent = gameData.gameState.currentDay || '?';
                 const sellNeedElement = document.getElementById(`sell-need-${resource}`);
-                if (sellNeedElement) sellNeedElement.textContent = gameData.currentColonyNeeds[resource] || 15;
+                if (sellNeedElement) sellNeedElement.textContent = gameData.gameState.colonyNeeds[resource] || 15;
               });
             }
 
             // Update mining section with tomorrow's colony needs
-            if (gameData.tomorrowColonyNeeds) {
+            if (gameData.gameState?.tomorrowColonyNeeds) {
               const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
               resources.forEach(resource => {
                 const miningDayElement = document.getElementById(`mining-day-${resource}`);
-                if (miningDayElement) miningDayElement.textContent = (gameData.currentDay + 1) || '?';
+                if (miningDayElement) miningDayElement.textContent = (gameData.gameState.currentDay || 0) + 1;
                 const miningNeedElement = document.getElementById(`mining-need-${resource}`);
-                if (miningNeedElement) miningNeedElement.textContent = gameData.tomorrowColonyNeeds[resource] || 15;
+                if (miningNeedElement) miningNeedElement.textContent = gameData.gameState.tomorrowColonyNeeds[resource] || 15;
               });
             }
 
@@ -1961,14 +1963,16 @@
             }
 
             // Update market prices
-            const priceWhiteDiamonds = document.getElementById('price-whiteDiamonds');
-            if (priceWhiteDiamonds) priceWhiteDiamonds.textContent = gameData.prices.whiteDiamonds;
-            const priceRedRubies = document.getElementById('price-redRubies');
-            if (priceRedRubies) priceRedRubies.textContent = gameData.prices.redRubies;
-            const priceBlueGems = document.getElementById('price-blueGems');
-            if (priceBlueGems) priceBlueGems.textContent = gameData.prices.blueGems;
-            const priceGreenPoison = document.getElementById('price-greenPoison');
-            if (priceGreenPoison) priceGreenPoison.textContent = gameData.prices.greenPoison;
+            if (gameData.gameState?.prices) {
+              const priceWhiteDiamonds = document.getElementById('price-whiteDiamonds');
+              if (priceWhiteDiamonds) priceWhiteDiamonds.textContent = gameData.gameState.prices.whiteDiamonds || 20;
+              const priceRedRubies = document.getElementById('price-redRubies');
+              if (priceRedRubies) priceRedRubies.textContent = gameData.gameState.prices.redRubies || 15;
+              const priceBlueGems = document.getElementById('price-blueGems');
+              if (priceBlueGems) priceBlueGems.textContent = gameData.gameState.prices.blueGems || 12;
+              const priceGreenPoison = document.getElementById('price-greenPoison');
+              if (priceGreenPoison) priceGreenPoison.textContent = gameData.gameState.prices.greenPoison || 10;
+            }
 
 
             // Update last night's sales
@@ -1979,7 +1983,7 @@
                   gameData.lastNightSales.forEach(sale => {
                     lastNightSalesDiv.innerHTML += `<p>${sale.quantity} ${getResourceIcon(sale.resource)} sold for $${sale.pricePerUnit} each. Total: $${sale.totalEarned}</p>`;
                   });
-                  lastNightSalesDiv.innerHTML += `<p><strong>Total Earnings: $${gameData.lastNightEarnings}</strong></p>`;
+                  lastNightSalesDiv.innerHTML += `<p><strong>Total Earnings: $${gameData.totalEarned || 0}</strong></p>`;
         } else {
                   lastNightSalesDiv.innerHTML = '<p>No sales last night.</p>';
                 }
