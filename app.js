@@ -188,6 +188,7 @@ function processCoreDayLogic(currentDay, players, decisions, callback) {
     
     // Return results
     callback(null, {
+      playerData, // Include the updated player data
       newPrices,
       tomorrowColonyNeeds,
       totalSupply,
@@ -200,6 +201,68 @@ function processCoreDayLogic(currentDay, players, decisions, callback) {
   } catch (error) {
     callback(error);
   }
+}
+
+// Update player data in database after day processing
+function updatePlayerDataAfterDayProcessing(players, result, currentDay, callback) {
+  const { playerData, totalSupply, dailySalesTotals, news } = result;
+  
+  if (!playerData) {
+    console.error('No player data returned from day processing');
+    return callback(new Error('No player data available'));
+  }
+  
+  // Process each player's data
+  let completed = 0;
+  let hasError = false;
+  
+  players.forEach(player => {
+    const updatedPlayer = playerData[player.id];
+    if (!updatedPlayer) {
+      console.error(`No updated data for player ${player.name}`);
+      hasError = true;
+      completed++;
+      if (completed === players.length) {
+        callback(hasError ? new Error('Some player updates failed') : null);
+      }
+      return;
+    }
+    
+    // Update player record in database with new values
+    db.run(
+      `UPDATE players SET 
+       stockpiles = ?,
+       credits = ?,
+       lastEfforts = ?,
+       last_night_earnings = ?,
+       last_updated = CURRENT_TIMESTAMP 
+       WHERE id = ?`,
+      [
+        JSON.stringify(updatedPlayer.stockpiles),
+        updatedPlayer.credits,
+        JSON.stringify(updatedPlayer.lastEfforts),
+        updatedPlayer.last_night_earnings || 0,
+        player.id
+      ],
+      function(err) {
+        if (err) {
+          console.error(`Error updating player ${player.name}:`, err.message);
+          hasError = true;
+        } else {
+          console.log(`✅ Updated player ${player.name}: ${JSON.stringify(updatedPlayer.stockpiles)} stockpiles, $${updatedPlayer.credits} credits`);
+        }
+        
+        completed++;
+        if (completed === players.length) {
+          if (hasError) {
+            callback(new Error('Some player updates failed'));
+          } else {
+            callback(null);
+          }
+        }
+      }
+    );
+  });
 }
 
 // Add this function to get current day's needs
@@ -753,22 +816,34 @@ app.post('/process-day', (req, res) => {
                   return res.json({ error: 'Failed to update game state' });
                 }
                 
-                // Clear today's decisions
-                db.run('DELETE FROM decisions WHERE day = ?', [currentDay], (err) => {
+                // Update all player data (stockpiles, credits, etc.)
+                updatePlayerDataAfterDayProcessing(players, result, currentDay, (err) => {
                   if (err) {
-                    console.error('Error clearing decisions in /process-day:', {
+                    console.error('Error updating player data in /process-day:', {
                       error: err.message,
                       currentDay,
                       timestamp: new Date().toISOString()
                     });
+                    return res.json({ error: 'Failed to update player data' });
                   }
                   
-                  console.log('✅ Day processed successfully!');
-                  res.json({ 
-                    success: true, 
-                    message: 'Day processed successfully!',
-                    gameEnded: false,
-                    newDay: newDay
+                  // Clear today's decisions
+                  db.run('DELETE FROM decisions WHERE day = ?', [currentDay], (err) => {
+                    if (err) {
+                      console.error('Error clearing decisions in /process-day:', {
+                        error: err.message,
+                        currentDay,
+                        timestamp: new Date().toISOString()
+                      });
+                    }
+                    
+                    console.log('✅ Day processed successfully!');
+                    res.json({ 
+                      success: true, 
+                      message: 'Day processed successfully!',
+                      gameEnded: false,
+                      newDay: newDay
+                    });
                   });
                 });
               }
