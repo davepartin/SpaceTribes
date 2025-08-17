@@ -1437,14 +1437,20 @@ app.get('/structured-news/:days?', (req, res) => {
         const structuredNews = {};
         
         newsRows.forEach(item => {
+          // Only process news items with valid categories that exist in NEWS_CATEGORIES
+          if (!item.category || !NEWS_CATEGORIES[item.category]) {
+            return; // Skip invalid categories
+          }
+          
           if (!structuredNews[item.day]) {
             structuredNews[item.day] = {
-              day: item.day,
-              raid: [],
-              mining: [],
-              market: [],
-              general: []
+              day: item.day
             };
+          }
+          
+          // Initialize category array if it doesn't exist
+          if (!structuredNews[item.day][item.category]) {
+            structuredNews[item.day][item.category] = [];
           }
           
           structuredNews[item.day][item.category].push({
@@ -1474,20 +1480,10 @@ const NEWS_CATEGORIES = {
     color: '#ff6666',
     title: 'Raid Operations'
   },
-  mining: {
-    icon: '⛏️', 
-    color: '#66ff66',
-    title: 'Mining Reports'
-  },
-  market: {
-    icon: '📈',
-    color: '#ffaa00',
-    title: 'Market Updates'
-  },
-  general: {
-    icon: '📰',
+  block: {
+    icon: '🛡️',
     color: '#66ccff',
-    title: 'General News'
+    title: 'Block Operations'
   }
 };
 
