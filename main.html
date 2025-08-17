@@ -3219,6 +3219,14 @@
 
         // Enhanced loadGameData to handle game status
         function loadGameDataEnhanced() {
+          // Additional validation before making the request
+          if (!playerId || playerId === '111' || playerId === 'undefined' || playerId === 'null' || isNaN(playerId) || playerId <= 0) {
+            console.log('Invalid playerId detected, redirecting to login');
+            localStorage.removeItem('playerId');
+            window.location.href = '/';
+            return;
+          }
+          
           fetch(`/game-data/${playerId}`)
             .then(res => {
               if (!res.ok) {
@@ -3229,6 +3237,8 @@
       .then(data => {
         if (data.error) {
                 if (data.error === 'Player not found') {
+                  console.log('Player not found, redirecting to login');
+                  localStorage.removeItem('playerId');
                   window.location.href = '/';
                   return;
                 }
@@ -3745,12 +3755,23 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             playerId = localStorage.getItem('playerId');
-            if (!playerId) {
-                window.location.href = '/'; // Redirect to login if no player ID
-            } else {
-                loadGameDataEnhanced(); // Use enhanced version
+            if (!playerId || playerId === '111' || playerId === 'undefined' || playerId === 'null') {
+                // Clear corrupted playerId and redirect to login
+                localStorage.removeItem('playerId');
+                window.location.href = '/';
+                return;
             }
-    });
+            
+            // Validate playerId format (should be a number)
+            if (isNaN(playerId) || playerId <= 0) {
+                localStorage.removeItem('playerId');
+                window.location.href = '/';
+                return;
+            }
+            
+            // Only load game data if we have a valid playerId
+            loadGameDataEnhanced();
+        });
   </script>
   
   <!-- Logout Button at Bottom -->
