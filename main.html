@@ -525,6 +525,83 @@
       padding: 20px;
     }
 
+    /* Colony Stockpiles Styles */
+    .colony-stockpiles-container {
+      margin-top: 20px;
+    }
+
+    .colony-stockpiles-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .colony-stockpiles-table th {
+      background: rgba(0, 255, 255, 0.2);
+      color: #00ffff;
+      padding: 12px 8px;
+      text-align: center;
+      font-family: 'Orbitron', monospace;
+      font-weight: bold;
+      border-bottom: 2px solid rgba(0, 255, 255, 0.3);
+    }
+
+    .colony-stockpiles-table td {
+      padding: 10px 8px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .colony-stockpiles-table tr:hover {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .resource-amount {
+      font-weight: bold;
+      font-family: 'Orbitron', monospace;
+    }
+
+    .resource-amount.mined {
+      color: #00ff00;
+    }
+
+    .resource-amount.mined::after {
+      content: " +";
+      color: #00ff00;
+    }
+
+    .resource-amount.raided {
+      color: #ffff00;
+    }
+
+    .resource-amount.raided::after {
+      content: " +";
+      color: #ffff00;
+    }
+
+    .resource-amount.held {
+      color: #ffffff;
+    }
+
+    .resource-amount.none {
+      color: #666666;
+    }
+
+    .player-name {
+      color: #00ffff;
+      font-weight: bold;
+      text-align: left;
+    }
+
+    .player-race {
+      color: #cccccc;
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
     .refresh-btn {
       background: linear-gradient(135deg, #00ffff, #00ccff);
       color: #222;
@@ -1341,6 +1418,20 @@
           <div class="players-dashboard" id="playersDashboard">
             <!-- Player status buttons will be inserted here by JavaScript -->
             <div class="loading-status">Loading player status...</div>
+          </div>
+        </div>
+
+        <!-- Colony Stockpiles - Public View -->
+        <div class="decision-section">
+          <h2>🏛️ Colony Stockpiles - Day <span id="colonyStockpilesDay">?</span></h2>
+          <p>Public view of all players' holdings. <span style="color: #00ff00;">Green +</span> = Mined today, <span style="color: #ffff00;">Yellow +</span> = Raided today, <span style="color: #ffffff;">White</span> = Held from previous days</p>
+          
+          <div style="text-align: center; margin-bottom: 20px;">
+            <button onclick="loadColonyStockpiles()" class="refresh-btn">🔄 Refresh Colony Stockpiles</button>
+          </div>
+          
+          <div class="colony-stockpiles-container" id="colonyStockpilesContainer">
+            <div class="loading-status">Loading colony stockpiles...</div>
           </div>
         </div>
 
@@ -2371,6 +2462,9 @@
 
           // Load player status from server
           loadPlayerStatus();
+          
+          // Load colony stockpiles
+          loadColonyStockpiles();
         }
 
         // Load and display player status
@@ -2469,6 +2563,96 @@
           `;
           
           alert(details);
+        }
+
+        // Load and display colony stockpiles
+        function loadColonyStockpiles() {
+          fetch('/colony-stockpiles')
+            .then(res => res.json())
+            .then(data => {
+              if (data.error) {
+                console.error('Failed to load colony stockpiles:', data.error);
+                return;
+              }
+              
+              displayColonyStockpiles(data);
+            })
+            .catch(err => {
+              console.error('Error loading colony stockpiles:', err);
+            });
+        }
+
+        // Display colony stockpiles in the table
+        function displayColonyStockpiles(data) {
+          const container = document.getElementById('colonyStockpilesContainer');
+          if (!container) return;
+
+          // Update day number
+          const dayElement = document.getElementById('colonyStockpilesDay');
+          if (dayElement) {
+            dayElement.textContent = data.currentDay;
+          }
+
+          // Create table
+          const table = document.createElement('table');
+          table.className = 'colony-stockpiles-table';
+          
+          // Create header
+          const thead = document.createElement('thead');
+          thead.innerHTML = `
+            <tr>
+              <th>Player</th>
+              <th>💎 White Diamonds</th>
+              <th>🔻 Red Rubies</th>
+              <th>🔷 Blue Gems</th>
+              <th>🌱 Green Poison</th>
+              <th>Total</th>
+            </tr>
+          `;
+          table.appendChild(thead);
+
+          // Create body
+          const tbody = document.createElement('tbody');
+          data.colonyStockpiles.forEach(player => {
+            const row = document.createElement('tr');
+            
+            const resourceCells = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'].map(resource => {
+              const stockpile = player.stockpiles[resource];
+              let cellContent = '';
+              let cssClass = 'resource-amount';
+              
+              if (stockpile.source === 'none') {
+                cellContent = '0';
+                cssClass += ' none';
+              } else if (stockpile.source === 'mined') {
+                cellContent = `${stockpile.amount}`;
+                cssClass += ' mined';
+              } else if (stockpile.source === 'raided') {
+                cellContent = `${stockpile.amount}`;
+                cssClass += ' raided';
+              } else {
+                cellContent = `${stockpile.amount}`;
+                cssClass += ' held';
+              }
+              
+              return `<td><span class="${cssClass}">${cellContent}</span></td>`;
+            }).join('');
+
+            row.innerHTML = `
+              <td>
+                <div class="player-name">${player.name}</div>
+                <div class="player-race">${player.race}</div>
+              </td>
+              ${resourceCells}
+              <td><strong>${player.totalResources}</strong></td>
+            `;
+            
+            tbody.appendChild(row);
+          });
+          
+          table.appendChild(tbody);
+          container.innerHTML = '';
+          container.appendChild(table);
         }
 
         // Update game status display

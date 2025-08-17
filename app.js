@@ -1231,6 +1231,85 @@ app.get('/players-status', (req, res) => {
   });
 });
 
+// Get colony stockpiles for public viewing (shows all players' holdings with color coding)
+app.get('/colony-stockpiles', (req, res) => {
+  db.all('SELECT * FROM players ORDER BY name', [], (err, players) => {
+    if (err) {
+      console.error('Colony stockpiles query error:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+      return res.json({ error: 'Failed to get colony stockpiles' });
+    }
+
+    // Get current day
+    db.get('SELECT current_day FROM game_state WHERE id = 1', [], (err, gameState) => {
+      if (err || !gameState) {
+        return res.json({ error: 'Failed to get game state' });
+      }
+
+      const currentDay = gameState.current_day;
+      
+      // Get decisions for current day to determine resource sources
+      db.all('SELECT * FROM decisions WHERE day = ?', [currentDay], (err, decisions) => {
+        if (err) {
+          decisions = [];
+        }
+
+        const decisionMap = {};
+        decisions.forEach(d => {
+          decisionMap[d.playerId] = d;
+        });
+
+        // Build colony stockpiles data
+        const colonyStockpiles = players.map(player => {
+          const decision = decisionMap[player.id];
+          const stockpiles = JSON.parse(player.stockpiles);
+          const lastEfforts = JSON.parse(player.lastEfforts || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}');
+          const protectedResources = JSON.parse(player.protected_resources || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}');
+          
+          // Create stockpile display with color coding
+          const stockpileDisplay = {};
+          const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
+          
+          resources.forEach(resource => {
+            const amount = stockpiles[resource] || 0;
+            const mined = lastEfforts[resource] || 0;
+            const protected = protectedResources[resource] || 0;
+            
+            if (amount === 0) {
+              stockpileDisplay[resource] = { amount: 0, source: 'none' };
+            } else if (mined > 0) {
+              // Green + for mined resources
+              stockpileDisplay[resource] = { amount: amount, source: 'mined', mined: mined };
+            } else if (protected > 0) {
+              // Yellow + for raided resources (protected resources are from raids)
+              stockpileDisplay[resource] = { amount: amount, source: 'raided', raided: protected };
+            } else {
+              // White for held resources (from previous days, etc.)
+              stockpileDisplay[resource] = { amount: amount, source: 'held' };
+            }
+          });
+
+          return {
+            id: player.id,
+            name: player.name,
+            race: player.race,
+            stockpiles: stockpileDisplay,
+            totalResources: Object.values(stockpiles).reduce((sum, val) => sum + val, 0)
+          };
+        });
+
+        res.json({
+          currentDay: currentDay,
+          totalPlayers: players.length,
+          colonyStockpiles: colonyStockpiles
+        });
+      });
+    });
+  });
+});
+
 // Get decisions for a specific day
 app.get('/decisions/:day', (req, res) => {
   const day = parseInt(req.params.day);
