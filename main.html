@@ -2076,6 +2076,7 @@
       <div class="admin-buttons">
             <button class="process-btn" onclick="processDay()">⚡ ADMIN: PROCESS NEXT DAY</button>
             <button class="admin-btn reset-btn" onclick="confirmResetGame()">💀 RESET GAME</button>
+            <button class="admin-btn" onclick="clearSubmissionStatus()">🧹 CLEAR SUBMISSION STATUS</button>
           </div>
         </div>
     </div>
@@ -2197,17 +2198,26 @@
         
         // Function to clear submission status manually (for debugging)
         function clearSubmissionStatus() {
-            const currentDay = gameData?.gameState?.currentDay || 1;
-            const submissionKey = `submitted_day_${currentDay}`;
-            localStorage.removeItem(submissionKey);
-            
-            // Also clear any other submission keys
+            // Clear all submission keys for all days
             for (let i = 1; i <= 10; i++) {
                 localStorage.removeItem(`submitted_day_${i}`);
             }
             
-            showMessage('Frontend submission status cleared! You can now submit decisions again.', 'success');
-            updateSubmitButton();
+            // Also clear any other potential submission-related keys
+            localStorage.removeItem('submitted');
+            localStorage.removeItem('submission_status');
+            
+            showMessage('✅ All submission status cleared! You can now submit decisions for any day.', 'success');
+            
+            // Force refresh the submit button state
+            if (gameData) {
+                updateSubmitButton();
+            }
+            
+            // Reload game data to refresh the UI
+            setTimeout(() => {
+                loadGameDataEnhanced();
+            }, 1000);
         }
         
         // Function to clear server-side decisions for current day
