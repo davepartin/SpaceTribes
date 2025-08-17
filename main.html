@@ -602,6 +602,85 @@
       font-style: italic;
     }
 
+    /* Dice Section Styles */
+    .dice-section {
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(255, 255, 0, 0.05);
+      border: 2px solid rgba(255, 255, 0, 0.3);
+      border-radius: 10px;
+    }
+
+    .dice-section h3 {
+      color: #ffff00;
+      margin-top: 0;
+      margin-bottom: 15px;
+    }
+
+    .dice-controls {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin: 20px 0;
+    }
+
+    .dice-btn {
+      background: linear-gradient(135deg, #ffff00, #ffcc00);
+      color: #000;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 25px;
+      font-family: 'Orbitron', monospace;
+      font-weight: bold;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(255, 255, 0, 0.3);
+    }
+
+    .dice-btn:hover {
+      background: linear-gradient(135deg, #ffcc00, #ffff00);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 255, 0, 0.4);
+    }
+
+    .dice-btn:disabled {
+      background: #666;
+      color: #ccc;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .dice-result {
+      font-family: 'Orbitron', monospace;
+      font-size: 1.2rem;
+      font-weight: bold;
+      padding: 10px 20px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      min-width: 150px;
+      text-align: center;
+    }
+
+    .dice-info {
+      margin-top: 15px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+
+    .dice-info ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .dice-info li {
+      margin: 5px 0;
+      color: #cccccc;
+    }
+
     .refresh-btn {
       background: linear-gradient(135deg, #00ffff, #00ccff);
       color: #222;
@@ -1579,9 +1658,7 @@
             </div>
             
             <div class="dump-actions">
-              <button class="dump-btn" id="dumpBtn" onclick="submitDump()" disabled>
-                💰 EMERGENCY DUMP
-              </button>
+              <p class="dump-note">💡 <strong>Note:</strong> Dump selection will be processed when you submit your decisions. You cannot dump resources you plan to sell.</p>
             </div>
           </div>
           
@@ -1675,6 +1752,27 @@
             <option value="greenPoison">🌱 Green Poison</option>
           </select>
             </div>
+        </div>
+        
+        <!-- Dice Roll Section -->
+        <div class="dice-section">
+          <h3>🎲 Raid Success Chance</h3>
+          <p>Roll the dice to determine if your raid will succeed. Roll 2+ to attempt the raid.</p>
+          
+          <div class="dice-controls">
+            <button type="button" id="rollDiceButton" onclick="rollDice()" class="dice-btn">
+              🎲 Roll Dice
+            </button>
+            <div class="dice-result" id="diceResult">Roll the dice first!</div>
+          </div>
+          
+          <div class="dice-info">
+            <p><strong>Dice Results:</strong></p>
+            <ul>
+              <li>🎲 1 = 💀 Raid fails automatically</li>
+              <li>🎲 2-6 = ✅ Raid attempt allowed</li>
+            </ul>
+          </div>
         </div>
       </div>
       
@@ -2078,6 +2176,22 @@
                 raidMaterial: rollResult >= 2 ? raidMaterial : null,
                 blockTarget: blockTarget || 'none'
             };
+
+            // Validate dump selection (prevent selling and dumping same resources)
+            const selectedDumpResource = document.getElementById('dumpResource').value;
+            if (selectedDumpResource !== 'none') {
+                const dumpAmount = parseInt(document.getElementById('dumpAmount').textContent) || 0;
+                const sellAmount = sellAssignments[selectedDumpResource] || 0;
+                
+                if (sellAmount > 0) {
+                    showMessage(`⚠️ Cannot dump ${selectedDumpResource} because you're also selling ${sellAmount} units of it!`, 'error');
+                    return;
+                }
+                
+                // Add dump to decisions
+                decisions.dumpResource = selectedDumpResource;
+                decisions.dumpAmount = dumpAmount;
+            }
 
             fetch('/submit-decisions', {
                 method: 'POST',

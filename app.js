@@ -442,6 +442,8 @@ db.serialize(() => {
       raidTarget TEXT,
       raidMaterial TEXT,
       blockTarget TEXT,
+      dumpResource TEXT DEFAULT 'none',
+      dumpAmount INTEGER DEFAULT 0,
       submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (playerId) REFERENCES players(id)
     )
@@ -524,6 +526,25 @@ db.serialize(() => {
   db.run(`ALTER TABLE players ADD COLUMN last_updated TIMESTAMP`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
       console.error('Database error adding last_updated column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // Add dump columns to decisions table
+  db.run(`ALTER TABLE decisions ADD COLUMN dumpResource TEXT DEFAULT 'none'`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Database error adding dumpResource column:', {
+        error: err.message,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  db.run(`ALTER TABLE decisions ADD COLUMN dumpAmount INTEGER DEFAULT 0`, (err) => {
+    if (err && !err.message.includes('duplicate column name')) {
+      console.error('Database error adding dumpAmount column:', {
         error: err.message,
         timestamp: new Date().toISOString()
       });
@@ -1000,7 +1021,7 @@ app.post('/force-clear-decisions/:day', (req, res) => {
 
 // Submit decisions endpoint
 app.post('/submit-decisions', (req, res) => {
-  const { playerId, day, efforts, sales, raidTarget, raidMaterial, blockTarget } = req.body;
+  const { playerId, day, efforts, sales, raidTarget, raidMaterial, blockTarget, dumpResource, dumpAmount } = req.body;
   
   if (!playerId || !day) {
     return res.json({ error: 'Missing required fields' });
@@ -1030,7 +1051,7 @@ app.post('/submit-decisions', (req, res) => {
     
     // Insert new decision
     db.run(
-      'INSERT INTO decisions (playerId, day, efforts, sales, raidTarget, raidMaterial, blockTarget) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO decisions (playerId, day, efforts, sales, raidTarget, raidMaterial, blockTarget, dumpResource, dumpAmount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         playerId,
         day,
@@ -1038,7 +1059,9 @@ app.post('/submit-decisions', (req, res) => {
         JSON.stringify(sales || {}),
         raidTarget || 'none',
         raidMaterial || 'none',
-        blockTarget || 'none'
+        blockTarget || 'none',
+        dumpResource || 'none',
+        dumpAmount || 0
       ],
       function(err) {
         if (err) {
