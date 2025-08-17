@@ -209,9 +209,25 @@
 
         // Check if playerId already exists in localStorage (e.g., if user is already logged in)
         // If so, redirect directly to main.html
-        document.addEventListener('DOMContentLoaded', () => {
-            if (localStorage.getItem('playerId')) {
-                window.location.href = '/main.html';
+        document.addEventListener('DOMContentLoaded', async () => {
+            const playerId = localStorage.getItem('playerId');
+            if (playerId) {
+                // Validate the playerId by checking if it exists on the server
+                try {
+                    const response = await fetch(`/game-data/${playerId}`);
+                    if (response.ok) {
+                        // Valid playerId, redirect to main game
+                        window.location.href = '/main.html';
+                    } else {
+                        // Invalid playerId, clear it and show login form
+                        localStorage.removeItem('playerId');
+                        console.log('Invalid playerId cleared, showing login form');
+                    }
+                } catch (error) {
+                    // Error occurred, clear invalid playerId and show login form
+                    localStorage.removeItem('playerId');
+                    console.log('Error validating playerId, cleared and showing login form');
+                }
             }
         });
     </script>
