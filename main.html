@@ -1985,8 +1985,8 @@
 
         function adjustSell(resource, amount) {
             const currentSell = sellAssignments[resource];
-            const availableStock = gameData.stockpiles[resource] || 0;
-            const protectedStock = gameData.protectedResources[resource] || 0;
+            const availableStock = gameData.player?.stockpiles[resource] || 0;
+            const protectedStock = gameData.player?.protectedResources[resource] || 0;
             const totalAvailable = availableStock + protectedStock;
 
             if (amount > 0) {
@@ -2953,10 +2953,10 @@
 
         // Update available dump options
         function updateDumpOptions() {
-          if (!gameData || !gameData.stockpiles) return;
+          if (!gameData || !gameData.player?.stockpiles) return;
           
           const dumpResourceSelect = document.getElementById('dumpResource');
-          const stockpiles = gameData.stockpiles;
+          const stockpiles = gameData.player.stockpiles;
           
           if (dumpResourceSelect) { // Add null check
             // Enable/disable options based on availability
@@ -3002,7 +3002,7 @@
         function adjustDump(change) {
           if (!selectedDumpResource || selectedDumpResource === 'none') return;
           
-          const available = gameData.stockpiles[selectedDumpResource] || 0;
+          const available = gameData.player?.stockpiles[selectedDumpResource] || 0;
           const maxDump = Math.min(available, 15);
           
           currentDumpAmount = Math.max(1, Math.min(currentDumpAmount + change, maxDump));
@@ -3016,7 +3016,7 @@
           if (dumpAmountElement) dumpAmountElement.textContent = currentDumpAmount;
           
           // Update button states
-          const available = gameData.stockpiles[selectedDumpResource] || 0;
+          const available = gameData.player?.stockpiles[selectedDumpResource] || 0;
           const maxDump = Math.min(available, 15);
           
           const minusBtn = document.querySelector('.dump-amount-controls button:first-child');
@@ -3042,7 +3042,7 @@
           
           // if (typeof trackUserActivity === 'function') trackUserActivity(); // Assuming this is defined elsewhere
           
-          const available = gameData.stockpiles[selectedDumpResource] || 0;
+          const available = gameData.player?.stockpiles[selectedDumpResource] || 0;
           if (currentDumpAmount > available) {
             showMessage(`Only have ${available} ${getResourceIcon(selectedDumpResource)} available`, 'error');
             return;
