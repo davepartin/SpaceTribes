@@ -322,6 +322,7 @@ function updatePlayerDataAfterDayProcessing(players, result, currentDay, callbac
        stockpiles = ?,
        credits = ?,
        lastEfforts = ?,
+       protected_resources = ?,
        last_night_earnings = ?,
        last_updated = CURRENT_TIMESTAMP 
        WHERE id = ?`,
@@ -329,6 +330,7 @@ function updatePlayerDataAfterDayProcessing(players, result, currentDay, callbac
         JSON.stringify(updatedPlayer.stockpiles),
         updatedPlayer.credits,
         JSON.stringify(updatedPlayer.lastEfforts),
+        JSON.stringify(updatedPlayer.protectedResources || {}),
         updatedPlayer.last_night_earnings || 0,
         player.id
       ],
