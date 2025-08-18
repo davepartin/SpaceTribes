@@ -1374,15 +1374,14 @@ app.get('/colony-stockpiles', (req, res) => {
             
             if (amount === 0) {
               stockpileDisplay[resource] = { amount: 0, source: 'none' };
-            } else if (mined > 0) {
-              // Green + for mined resources
-              stockpileDisplay[resource] = { amount: amount, source: 'mined', mined: mined };
-            } else if (protected > 0) {
-              // Yellow + for raided resources (protected resources are from raids)
-              stockpileDisplay[resource] = { amount: amount, source: 'raided', raided: protected };
             } else {
-              // White for held resources (from previous days, etc.)
-              stockpileDisplay[resource] = { amount: amount, source: 'held' };
+              // Always show total amount, mined amount (if any), and raided amount (if any)
+              stockpileDisplay[resource] = { 
+                amount: amount, 
+                mined: mined,
+                raided: protected,
+                source: 'mixed'
+              };
             }
           });
 
