@@ -191,18 +191,37 @@ function processCoreDayLogic(currentDay, players, decisions, gameState, callback
     // STEP 4: COMBAT PHASE - Resolve raids and blocks
     console.log('⚔️ Combat phase - resolving raids and blocks...');
     
+    // Debug: Log all decisions for combat
+    console.log('🔍 Combat Debug - All decisions:', decisionMap);
+    console.log('🔍 Combat Debug - All players:', players.map(p => ({ id: p.id, name: p.name })));
+    
     players.forEach(player => {
       const pdata = playerData[player.id];
       const decision = decisionMap[player.id];
       
+      console.log(`🔍 Combat Debug - Player ${player.name}:`, {
+        hasDecision: !!decision,
+        raidTarget: decision?.raidTarget,
+        raidMaterial: decision?.raidMaterial,
+        blockTarget: decision?.blockTarget
+      });
+      
       if (decision && decision.raidTarget && decision.raidTarget !== 'none') {
+        console.log(`🔍 Combat Debug - ${player.name} attempting raid on ${decision.raidTarget}`);
+        
         // Find target player
         const targetPlayer = players.find(p => p.name === decision.raidTarget);
         if (targetPlayer && targetPlayer.id !== player.id) {
           const targetData = playerData[targetPlayer.id];
           
+          console.log(`🔍 Combat Debug - Target ${targetPlayer.name} data:`, {
+            stockpiles: targetData.stockpiles,
+            blockTarget: targetData.blockTarget
+          });
+          
           // Check if raid is blocked
           const isBlocked = targetData.blockTarget === player.name;
+          console.log(`🔍 Combat Debug - Raid blocked? ${isBlocked} (${targetData.blockTarget} === ${player.name})`);
           
           if (isBlocked) {
             // Raid blocked
@@ -235,6 +254,8 @@ function processCoreDayLogic(currentDay, players, decisions, gameState, callback
               console.log(`❌ ${player.name} raid failed: target resource ${raidResource} not available`);
             }
           }
+        } else {
+          console.log(`🔍 Combat Debug - Invalid target for ${player.name}:`, decision.raidTarget);
         }
       }
     });
