@@ -75,7 +75,7 @@ function addGeneralNews(day, message, priority = 1) {
 }
 
 // Core day processing logic
-function processCoreDayLogic(currentDay, players, decisions, callback) {
+function processCoreDayLogic(currentDay, players, decisions, gameState, callback) {
   try {
     // Initialize data structures
     const playerData = {};
@@ -91,7 +91,7 @@ function processCoreDayLogic(currentDay, players, decisions, callback) {
         id: player.id,
         name: player.name,
         credits: player.credits || 0,
-        stockpiles: JSON.parse(player.stockpiles || '{"whiteDiamonds":3,"redRubies":3,"blueGems":3,"greenPoison":3}'),
+        stockpiles: JSON.parse(player.stockpiles || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'),
         protectedResources: JSON.parse(player.protected_resources || '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'),
         lastEfforts: { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 },
         last_night_earnings: player.last_night_earnings || 0
@@ -104,7 +104,9 @@ function processCoreDayLogic(currentDay, players, decisions, callback) {
         sales: JSON.parse(decision.sales || '{}'),
         raidTarget: decision.raidTarget || 'none',
         raidMaterial: decision.raidMaterial || 'none',
-        blockTarget: decision.blockTarget || 'none'
+        blockTarget: decision.blockTarget || 'none',
+        dumpResource: decision.dumpResource || 'none',
+        dumpAmount: decision.dumpAmount || 0
       };
     });
     
@@ -126,27 +128,15 @@ function processCoreDayLogic(currentDay, players, decisions, callback) {
           }
         });
       } else {
-        // Player didn't submit decisions - give passive income (2💎 2🔻 2🔷 2🌱)
-        pdata.stockpiles.whiteDiamonds = (pdata.stockpiles.whiteDiamonds || 0) + 2;
-        pdata.stockpiles.redRubies = (pdata.stockpiles.redRubies || 0) + 2;
-        pdata.stockpiles.blueGems = (pdata.stockpiles.blueGems || 0) + 2;
-        pdata.stockpiles.greenPoison = (pdata.stockpiles.greenPoison || 0) + 2;
-        
-        // Update their lastEfforts to show what they "mined"
+        // Player didn't submit decisions - no passive income, they get nothing
         pdata.lastEfforts = {
-          whiteDiamonds: 2,
-          redRubies: 2,
-          blueGems: 2,
-          greenPoison: 2
+          whiteDiamonds: 0,
+          redRubies: 0,
+          blueGems: 0,
+          greenPoison: 0
         };
         
-        // Add to total supply for market calculations
-        totalSupply.whiteDiamonds += 2;
-        totalSupply.redRubies += 2;
-        totalSupply.blueGems += 2;
-        totalSupply.greenPoison += 2;
-        
-        news.push(`🌙 ${player.name} was auto-assigned: 2💎 2🔻 2🔷 2🌱 (absent)`);
+        news.push(`🌙 ${player.name} was absent and mined nothing`);
       }
     });
     
@@ -176,7 +166,29 @@ function processCoreDayLogic(currentDay, players, decisions, callback) {
       }
     });
     
-    // STEP 3: COMBAT PHASE - Resolve raids and blocks
+    // STEP 2.5: DUMP PROCESSING - Process emergency dumps
+    players.forEach(player => {
+      const pdata = playerData[player.id];
+      const decision = decisionMap[player.id];
+      
+      if (decision && decision.dumpResource && decision.dumpResource !== 'none' && decision.dumpAmount > 0) {
+        const dumpResource = decision.dumpResource;
+        const dumpAmount = Math.min(decision.dumpAmount, pdata.stockpiles[dumpResource] || 0);
+        
+        if (dumpAmount > 0) {
+          // Emergency dump at guaranteed $10/unit
+          const dumpEarnings = dumpAmount * 10;
+          
+          pdata.credits += dumpEarnings;
+          pdata.stockpiles[dumpResource] -= dumpAmount;
+          pdata.last_night_earnings += dumpEarnings;
+          
+          news.push(`🚨 ${player.name} emergency dumped ${dumpAmount} ${getResourceIcon(dumpResource)} for $${dumpEarnings}`);
+        }
+      }
+    });
+    
+    // STEP 4: COMBAT PHASE - Resolve raids and blocks
     console.log('⚔️ Combat phase - resolving raids and blocks...');
     
     players.forEach(player => {
@@ -227,15 +239,19 @@ function processCoreDayLogic(currentDay, players, decisions, callback) {
       }
     });
     
-    // STEP 4: MARKET PRICE CALCULATION
+    // STEP 5: MARKET PRICE CALCULATION
     const currentPrices = { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
     const currentColonyNeeds = getCurrentColonyNeeds(currentDay);
     const newPrices = calculateSellingBasedPrices(dailySalesTotals, currentColonyNeeds, currentPrices);
     const tomorrowColonyNeeds = getCurrentColonyNeeds(currentDay + 1);
     
-    // STEP 5: UPDATE PRICE HISTORY
-    const priceHistory = [{ day: currentDay, ...currentPrices }];
-    const colonyNeedsHistory = [{ day: currentDay, ...currentColonyNeeds }];
+    // STEP 6: UPDATE PRICE HISTORY
+    // Get existing price history and append new day
+    const existingPriceHistory = JSON.parse(gameState.price_history || '[]');
+    const priceHistory = [...existingPriceHistory, { day: currentDay, ...newPrices }];
+    
+    const existingColonyNeedsHistory = JSON.parse(gameState.colony_needs_history || '[]');
+    const colonyNeedsHistory = [...existingColonyNeedsHistory, { day: currentDay, ...currentColonyNeeds }];
     
     // Return results
     callback(null, {
@@ -423,9 +439,9 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT UNIQUE NOT NULL,
       race TEXT NOT NULL,
-      pin TEXT NOT NULL,
+      pin TEXT,
       credits INTEGER DEFAULT 0,
-      stockpiles TEXT DEFAULT '{"whiteDiamonds":3,"redRubies":3,"blueGems":3,"greenPoison":3}',
+      stockpiles TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       protected_resources TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       lastEfforts TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -634,20 +650,20 @@ db.serialize(() => {
     }
   });
 
-  // Function to create initial 6 players for the game
+  // Function to create initial 6 players for the game (without PINs - they'll be set on first login)
   function createInitialPlayers() {
     const initialPlayers = [
-      { name: 'Dave', race: 'Tribe of Endor', pin: '1234' },
-      { name: 'Silas', race: 'Tribe of Siluria', pin: '1234' },
-      { name: 'Chris', race: 'Tribe of Elantris', pin: '1234' },
-      { name: 'Brian', race: 'Tribe of Psychlos', pin: '1234' },
-      { name: 'Joel', race: 'Tribe of Leojia', pin: '1234' },
-      { name: 'Curtis', race: 'Tribe of Momma Say', pin: '1234' }
+      { name: 'Dave', race: 'Tribe of Endor' },
+      { name: 'Silas', race: 'Tribe of Siluria' },
+      { name: 'Chris', race: 'Tribe of Elantris' },
+      { name: 'Brian', race: 'Tribe of Psychlos' },
+      { name: 'Joel', race: 'Tribe of Leojia' },
+      { name: 'Curtis', race: 'Tribe of Momma Say' }
     ];
 
     initialPlayers.forEach(player => {
-      db.run('INSERT OR IGNORE INTO players (name, race, pin) VALUES (?, ?, ?)', 
-        [player.name, player.race, player.pin], (err) => {
+      db.run('INSERT OR IGNORE INTO players (name, race) VALUES (?, ?)', 
+        [player.name, player.race], (err) => {
         if (err) {
           console.error(`Error creating player ${player.name}:`, err.message);
         } else {
@@ -689,14 +705,25 @@ app.post('/login', (req, res) => {
     }
 
     if (row) {
-      // Player exists - check PIN
-      if (row.pin === pin) {
-        res.json({ playerId: row.id, race: row.race });
+      // Player exists
+      if (!row.pin) {
+        // First time login - set PIN
+        db.run('UPDATE players SET pin = ? WHERE name = ?', [pin, name], (err) => {
+          if (err) {
+            console.error('Error setting PIN for player:', err.message);
+            return res.json({ error: 'Failed to set PIN' });
+          }
+          res.json({ playerId: row.id, race: row.race, firstTime: true });
+        });
+      } else if (row.pin === pin) {
+        // Returning player - PIN matches
+        res.json({ playerId: row.id, race: row.race, firstTime: false });
       } else {
+        // Returning player - incorrect PIN
         res.json({ error: 'Incorrect PIN' });
       }
     } else {
-      // Create new player
+      // Player doesn't exist - create new player
       const tribeMap = {
         'Dave': 'Tribe of Endor',
         'Silas': 'Tribe of Siluria', 
@@ -719,7 +746,7 @@ app.post('/login', (req, res) => {
             });
             return res.json({ error: 'Registration failed' });
           }
-          res.json({ playerId: this.lastID, race: race });
+          res.json({ playerId: this.lastID, race: race, firstTime: true });
         }
       );
     }
@@ -764,7 +791,7 @@ app.post('/process-day', (req, res) => {
         console.log(`🎮 Processing day ${currentDay} for ${players.length} human players`);
 
         // Process the day using core logic
-        processCoreDayLogic(currentDay, players, decisions, (err, result) => {
+        processCoreDayLogic(currentDay, players, decisions, state, (err, result) => {
           if (err) {
             console.error('Error in core day processing:', {
               error: err.message,
@@ -1631,7 +1658,7 @@ function checkAndAutoAdvance(currentDay) {
               });
               return;
             }
-            processCoreDayLogic(actualCurrentDay, playersForProcess, decisions, (err, result) => {
+            processCoreDayLogic(actualCurrentDay, playersForProcess, decisions, state, (err, result) => {
               if (err) {
                 console.error('Auto-advance: Error during core day processing:', {
                   error: err,
@@ -1764,15 +1791,15 @@ app.post('/reset-game', (req, res) => {
       }
     });
     
-    // Reset game state to Day 1 with correct starting colony needs
+    // Reset game state to Day 0 with correct starting colony needs
     db.run(`UPDATE game_state SET 
-      current_day = 1,
+      current_day = 0,
       market_prices = '{"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}',
       colony_needs = '{"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}',
       last_supply = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       daily_sales_totals = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
-      price_history = '[{"day":1,"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}]',
-      colony_needs_history = '[{"day":1,"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}]',
+      price_history = '[{"day":0,"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}]',
+      colony_needs_history = '[{"day":0,"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}]',
       active_players = 0,
       last_updated = CURRENT_TIMESTAMP
       WHERE id = 1`, (err) => {
@@ -1786,7 +1813,7 @@ app.post('/reset-game', (req, res) => {
       
       // Add welcome news for new game
       db.run('INSERT INTO news (day, message, category, priority) VALUES (?, ?, ?, ?)', 
-        [1, `🚀 New ${GAME_CONFIG.GAME_DURATION_DAYS}-day galactic conquest begins! May the best commander win!`, 'general', 3], (err) => {
+        [0, `🚀 New ${GAME_CONFIG.GAME_DURATION_DAYS}-day galactic conquest begins! May the best commander win!`, 'general', 3], (err) => {
         if (err) {
           console.error('Error adding welcome news in /reset-game:', {
             error: err.message,

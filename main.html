@@ -229,7 +229,7 @@
       }
       
       .credits-display {
-        font-size: 1.6rem;
+        font-size: 2rem;
       }
       
       .player-name {
@@ -242,39 +242,60 @@
       }
       
       .material-row {
-        padding: 10px 15px;
-        margin: 8px 0;
+        padding: 6px 10px;
+        margin: 4px 0;
+        min-height: 50px;
+        flex-direction: row;
       }
       
       .material-icon {
-        font-size: 1.5rem;
-        margin-right: 8px;
+        font-size: 1.4rem;
+        margin-right: 6px;
       }
       
-      .sell-controls {
+      .material-info {
         gap: 6px;
       }
       
+      .content-container {
+        font-size: 0.9rem;
+        line-height: 1.2;
+      }
+      
+      .sell-controls {
+        gap: 3px;
+      }
+      
       .sell-controls button {
-        width: 32px;
-        height: 32px;
-        font-size: 1.3rem;
+        width: 28px;
+        height: 28px;
+        font-size: 1rem;
       }
       
       .count-display {
         padding: 6px 10px;
-        font-size: 1rem;
-        min-width: 40px;
+        font-size: 1.2rem;
+        min-width: 45px;
       }
       
       section, .decision-section {
-        padding: 15px;
-        margin-bottom: 15px;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+      }
+      
+      /* Market News mobile consistency */
+      #marketNewsContainer .resource-amount {
+        font-size: 1rem !important;
+      }
+      
+      #marketNewsContainer table {
+        font-size: 1rem;
       }
       
       h2 {
-        font-size: 1.4rem;
-        margin-bottom: 10px;
+        font-size: 1.2rem;
+        margin-bottom: 8px;
       }
       
       .submit-btn {
@@ -294,19 +315,51 @@
       }
       
       table {
-        font-size: 0.9rem;
+        font-size: 0.75rem;
+        display: table;
+        white-space: normal;
       }
       
       th, td {
-        padding: 6px 8px;
+        padding: 4px 6px;
+        font-size: 0.7rem;
+      }
+      
+      th {
+        font-size: 0.65rem;
+      }
+      
+      /* Mobile colony stockpiles table */
+      .colony-stockpiles-table {
+        font-size: 1rem;
+      }
+      
+      .colony-stockpiles-table th {
+        padding: 10px 8px;
+        font-size: 1rem;
+      }
+      
+      .colony-stockpiles-table td {
+        padding: 10px 8px;
+        font-size: 1rem;
+      }
+      
+      .resource-amount {
+        font-size: 1rem;
+        padding: 4px 6px;
+        min-width: 40px;
+      }
+      
+      .player-name {
+        font-size: 1rem;
       }
     }
     
     section, .decision-section {
       background: rgba(255, 255, 255, 0.03);
-      border-radius: 15px;
-      padding: 25px;
-      margin-bottom: 25px;
+      border-radius: 12px;
+      padding: 15px;
+      margin-bottom: 15px;
       border: 1px solid rgba(255, 255, 255, 0.1);
     }
     
@@ -351,56 +404,61 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 15px 20px;
-      margin: 10px 0;
+      padding: 8px 12px;
+      margin: 6px 0;
       background: rgba(255, 255, 255, 0.05);
-      border-radius: 10px;
+      border-radius: 8px;
       border: 1px solid rgba(255, 255, 255, 0.1);
       transition: all 0.3s ease;
+      min-height: 60px;
     }
     
     .material-row:hover {
       background: rgba(255, 255, 255, 0.08);
-      transform: translateY(-2px);
+      transform: translateY(-1px);
     }
     
     .material-icon {
       font-size: 1.8rem;
-      filter: drop-shadow(0 0 10px currentColor);
-      margin-right: 10px;
+      filter: drop-shadow(0 0 8px currentColor);
+      margin-right: 8px;
     }
     
     .material-info {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       flex: 1;
-      flex-direction: row;
-      gap: 15px;
+      gap: 8px;
+      overflow: hidden;
     }
     
     .icon-container {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 3px;
       flex-shrink: 0;
     }
     
     .content-container {
       flex: 1;
+      min-width: 0;
+      font-size: 1rem;
+      line-height: 1.3;
     }
     
     .sell-controls {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 4px;
+      flex-shrink: 0;
     }
     
     .sell-controls button {
-      width: 38px;
-      height: 38px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       border: none;
-      font-size: 1.6rem;
+      font-size: 1.2rem;
       font-weight: bold;
       background: linear-gradient(135deg, #00ffff, #00ccff);
       color: #222;
@@ -427,10 +485,10 @@
       background: rgba(0, 255, 255, 0.2);
       border: 2px solid rgba(0, 255, 255, 0.5);
       border-radius: 8px;
-      padding: 8px 15px;
+      padding: 8px 12px;
       font-family: 'Orbitron', monospace;
       font-weight: bold;
-      font-size: 1.2rem;
+      font-size: 1.4rem;
       color: #00ffff;
       min-width: 50px;
       text-align: center;
@@ -470,18 +528,32 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 10px;
+      font-size: 0.9rem;
+      overflow-x: auto;
+      display: block;
+      white-space: nowrap;
+    }
+    
+    thead, tbody, tr {
+      display: table;
+      width: 100%;
+      table-layout: fixed;
     }
     
     th, td {
-      padding: 8px 12px;
+      padding: 6px 8px;
       text-align: left;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      word-wrap: break-word;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
     th {
       background: rgba(255, 255, 255, 0.1);
       color: #00ffff;
       font-family: 'Orbitron', monospace;
+      font-size: 0.85rem;
     }
     
     ul {
@@ -499,69 +571,131 @@
       border: 2px solid rgba(255, 0, 0, 0.3);
     }
 
-    /* Player Status Dashboard Styles */
-    .players-dashboard {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 15px;
-      margin-top: 20px;
+    /* Enhanced Table Responsiveness */
+    .table-wrapper {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin: 10px 0;
     }
 
-    .player-status-card {
-      background: rgba(255, 255, 255, 0.05);
-      border: 2px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 20px;
-      transition: all 0.3s ease;
-      cursor: pointer;
+    /* Raid News Styling */
+    .news-day-section {
+      margin-bottom: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.02);
     }
 
-    .player-status-card:hover {
-      transform: translateY(-3px);
-      border-color: rgba(0, 255, 255, 0.5);
-      box-shadow: 0 8px 25px rgba(0, 255, 255, 0.2);
-    }
-
-    .player-status-card.active {
-      border-color: #00ff00;
-      background: rgba(0, 255, 0, 0.1);
-    }
-
-    .player-status-card.waiting {
-      border-color: #ffff00;
-      background: rgba(255, 255, 0, 0.1);
-    }
-
-    .player-status-card.inactive {
-      border-color: #ff6666;
-      background: rgba(255, 0, 0, 0.1);
-    }
-
-    .player-header-info {
+    .news-day-header {
+      background: rgba(0, 255, 255, 0.1);
+      border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+      padding: 12px 20px;
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      margin-bottom: 15px;
-    }
-
-    .player-name {
-      font-size: 1.2rem;
+      align-items: center;
+      font-family: 'Orbitron', monospace;
       font-weight: bold;
       color: #00ffff;
     }
 
-    .player-race {
+    .news-day-content {
+      padding: 15px;
+    }
+
+    .news-item {
+      padding: 8px 15px;
+      margin: 5px 0;
+      border-radius: 6px;
+      font-family: Arial, sans-serif;
       font-size: 0.9rem;
+    }
+
+    .raid-news {
+      background: rgba(255, 0, 0, 0.1);
+      border-left: 3px solid #ff6666;
+      color: #ffcccc;
+    }
+
+    .block-news {
+      background: rgba(0, 255, 255, 0.1);
+      border-left: 3px solid #00ffff;
+      color: #ccffff;
+    }
+
+    .no-news {
+      text-align: center;
       color: #cccccc;
       font-style: italic;
+      padding: 20px;
+    }
+
+    /* Make important numbers bigger and more prominent */
+    .content-container span[id*="stockpiles-"],
+    .content-container span[id*="total-available-"],
+    .content-container span[id*="need-"] {
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+
+    /* Player Status Dashboard Styles */
+    .players-dashboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 20px;
+      max-width: 600px;
+    }
+
+    .player-status-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 2px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 12px 16px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 50px;
+    }
+
+    .player-status-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(0, 255, 255, 0.3);
+      box-shadow: 0 4px 15px rgba(0, 255, 255, 0.1);
+    }
+
+    .player-status-card.active {
+      border-color: #00ff00;
+      background: rgba(0, 255, 0, 0.05);
+    }
+
+    .player-status-card.waiting {
+      border-color: #ffff00;
+      background: rgba(255, 255, 0, 0.05);
+    }
+
+    .player-status-card.inactive {
+      border-color: #666666;
+      background: rgba(102, 102, 102, 0.05);
+    }
+
+    .player-name {
+      font-size: 1rem;
+      font-weight: bold;
+      color: #00ffff;
+      flex: 1;
     }
 
     .player-status {
-      font-size: 1.1rem;
+      font-size: 0.9rem;
       font-weight: bold;
-      padding: 5px 12px;
-      border-radius: 20px;
+      padding: 4px 10px;
+      border-radius: 12px;
       text-align: center;
+      min-width: 80px;
     }
 
     .player-status.active {
@@ -577,50 +711,12 @@
     }
 
     .player-status.inactive {
-      background: rgba(255, 0, 0, 0.2);
-      color: #ff6666;
-      border: 1px solid #ff6666;
+      background: rgba(102, 102, 102, 0.2);
+      color: #999999;
+      border: 1px solid #666666;
     }
 
-    .player-details {
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-    }
 
-    .player-stats {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    .stat-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 0.9rem;
-    }
-
-    .stat-label {
-      color: #cccccc;
-      min-width: 60px;
-    }
-
-    .stat-value {
-      color: #00ffff;
-      font-weight: bold;
-    }
-
-    .player-activity {
-      font-size: 0.9rem;
-      color: #ffff00;
-      text-align: center;
-      padding: 8px;
-      background: rgba(255, 255, 0, 0.1);
-      border-radius: 8px;
-      border: 1px solid rgba(255, 255, 0, 0.3);
-    }
 
     .loading-status {
       text-align: center;
@@ -631,33 +727,42 @@
 
     /* Colony Stockpiles Styles */
     .colony-stockpiles-container {
-      margin-top: 20px;
+      margin-top: 25px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.02);
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .colony-stockpiles-table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 15px;
+      margin-top: 20px;
       background: rgba(255, 255, 255, 0.05);
-      border-radius: 10px;
+      border-radius: 12px;
       overflow: hidden;
+      font-size: 1rem;
+      font-family: Arial, sans-serif;
     }
 
     .colony-stockpiles-table th {
       background: rgba(0, 255, 255, 0.2);
       color: #00ffff;
-      padding: 12px 8px;
+      padding: 14px 12px;
       text-align: center;
       font-family: Arial, sans-serif;
       font-weight: bold;
+      font-size: 1rem;
       border-bottom: 2px solid rgba(0, 255, 255, 0.3);
     }
 
     .colony-stockpiles-table td {
-      padding: 10px 8px;
+      padding: 12px 12px;
       text-align: center;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       font-family: Arial, sans-serif;
+      font-size: 1rem;
+      vertical-align: middle;
     }
 
     .colony-stockpiles-table tr:hover {
@@ -667,6 +772,17 @@
     .resource-amount {
       font-weight: bold;
       font-family: Arial, sans-serif;
+      font-size: 1rem;
+      padding: 6px 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+      display: inline-block;
+      min-width: 50px;
+    }
+    
+    /* Ensure Market News numbers stay consistent on mobile */
+    #marketNewsContainer .resource-amount {
+      font-size: 1rem !important;
     }
 
     .resource-amount.mined {
@@ -689,12 +805,8 @@
       color: #00ffff;
       font-weight: bold;
       text-align: left;
-    }
-
-    .player-race {
-      color: #cccccc;
-      font-size: 0.9rem;
-      font-style: italic;
+      font-size: 1rem;
+      font-family: Arial, sans-serif;
     }
 
     /* Dice Section Styles */
@@ -827,37 +939,7 @@
       background: rgba(255, 255, 255, 0.1);
     }
     
-        /* New styles for game structure */
-        .game-status-header {
-          background: rgba(255, 255, 0, 0.1);
-          border: 2px solid rgba(255, 255, 0, 0.3);
-          border-radius: 15px;
-          padding: 20px;
-          margin-bottom: 20px;
-          font-family: 'Orbitron', monospace;
-      text-align: center;
-        }
 
-        .status-row {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin: 5px 0;
-          font-size: 1.1rem;
-        }
-
-        .winner-announcement {
-          font-size: 2rem;
-      color: #ffff00;
-          text-shadow: 0 0 20px rgba(255, 255, 0, 0.8);
-          margin-bottom: 10px;
-          animation: glow 2s ease-in-out infinite alternate;
-        }
-
-        .winner-credits {
-          font-size: 1.2rem;
-          color: #00ff00;
-        }
 
         .modal {
           position: fixed;
@@ -915,6 +997,15 @@
           font-weight: 900;
           margin-bottom: 10px;
           text-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+        }
+
+        .winner-tribe {
+          font-size: 1.2rem;
+          color: #ffff00;
+          font-family: 'Orbitron', monospace;
+          font-weight: 600;
+          margin-bottom: 15px;
+          text-shadow: 0 0 15px rgba(255, 255, 0, 0.6);
         }
 
         .winner-score {
@@ -1000,8 +1091,8 @@
     
         .reset-confirm-btn {
           background: linear-gradient(135deg, #ff4444, #cc0000);
-          color: #fff;
-        }
+      color: #fff;
+    }
 
         .modal-btn:hover {
       transform: translateY(-2px);
@@ -1649,43 +1740,16 @@
         <span class="player-name">Player: <span id="playerCommander">Loading...</span></span>
         <span class="credits-display">Credits: $<span id="playerCredits">0</span></span>
       </div>
-      <div class="secondary-info">
-        <span class="tribe-info">Tribe: <span id="playerRace">Loading...</span></span>
-        <span class="robots-info">Available Robots: <span id="robotCount">12</span>/12</span>
-      </div>
     </div>
 
-        <!-- 1. Game Status Header (add after player-header) -->
-        <div class="game-status-header" id="gameStatusHeader">
-          <div id="activeGameStatus">
-            <div class="status-row">
-              <span>📅 Day <span id="statusCurrentDay">?</span> of 10</span>
-              <span>⏰ <span id="daysRemaining">?</span> days remaining</span>
-            </div>
-            <div class="status-row">
-              <span>👥 <span id="submittedCount">0</span>/<span id="activePlayerCount">0</span> players submitted</span>
-              <span id="autoAdvanceStatus">⏳ Waiting for submissions...</span>
-      </div>
-    </div>
 
-          <div id="gameEndedStatus" style="display: none;">
-            <div class="winner-announcement">
-              🏆 <span id="winnerName">Game Complete!</span> 🏆
-            </div>
-            <div class="winner-credits">
-              Final Score: $<span id="winnerCredits">0</span>
-            </div>
-          </div>
-        </div>
 
         <!-- Player Status Dashboard -->
         <div class="decision-section">
           <h2>Dashboard</h2>
           <p>Real-time status of all 6 players. Green = Active, Yellow = Waiting, Red = Inactive</p>
           
-          <div style="text-align: center; margin-bottom: 20px;">
-            <button onclick="loadPlayerStatus()" class="refresh-btn">🔄 Refresh Player Status</button>
-          </div>
+
           
           <div class="players-dashboard" id="playersDashboard">
             <!-- Player status buttons will be inserted here by JavaScript -->
@@ -1696,10 +1760,10 @@
         <!-- Colony Stockpiles - Public View -->
         <div class="decision-section">
           <h2>🏛️ Colony Stockpiles - Day <span id="colonyStockpilesDay">?</span></h2>
-          <p>Public view of all players' holdings. <span style="color: #ffffff;">White</span> = Current quantity, <span style="color: #00ff00;">Green (+#)</span> = Mined last night</p>
+          <p><span style="color: #ffffff;">Total</span> / <span style="color: #00ff00;">Was Mined</span> / <span style="color: #ffff00;">Was Raided</span> Yesterday</p>
           
           <div style="text-align: center; margin-bottom: 20px;">
-            <button onclick="loadColonyStockpiles()" class="refresh-btn">🔄 Refresh Colony Stockpiles</button>
+
           </div>
           
           <div class="colony-stockpiles-container" id="colonyStockpilesContainer">
@@ -1707,33 +1771,13 @@
           </div>
         </div>
 
-        <!-- Daily News Command Center -->
+        <!-- Raid News -->
         <section class="decision-section">
-          <h2>📰 Daily News Command Center</h2>
+          <h2>⚔️ Raid News</h2>
           
-          <!-- News Controls -->
-          <div class="news-controls">
-            <button class="news-toggle active" data-view="structured" onclick="toggleNewsView('structured')">
-              📋 Organized View
-            </button>
-            <button class="news-toggle" data-view="simple" onclick="toggleNewsView('simple')">
-              📜 Simple Feed
-            </button>
-            <select id="newsFilter" onchange="filterNews()">
-              <option value="all">All Categories</option>
-              <option value="raid">⚔️ Raids Only</option>
-              <option value="block">🛡️ Blocks Only</option>
-            </select>
-          </div>
-          
-          <!-- Structured News View -->
-          <div id="structuredNewsView" class="news-view">
-            <div id="structuredNewsContainer"></div>
-          </div>
-          
-          <!-- Simple News View (fallback) -->
-          <div id="simpleNewsView" class="news-view" style="display: none;">
-            <ul id="newsBoard"></ul>
+          <!-- Raid News Container -->
+          <div id="raidNewsContainer">
+            <div class="loading-status">Loading raid news...</div>
           </div>
         </section>
 
@@ -1753,43 +1797,18 @@
                         <!-- Losing names will be inserted here -->
                     </div>
                 </div>
-            </div>
+          </div>
         </div>
 
         <div class="decision-section">
-            <h2>📊 Current Market Prices</h2>
-          <table>
-              <thead>
-                <tr>
-                  <th>Resource</th>
-                        <th>Price per unit</th>
-                </tr>
-              </thead>
-                <tbody>
-                    <tr><td>💎 White Diamonds</td><td>$<span id="price-whiteDiamonds">?</span></td></tr>
-                    <tr><td>🔻 Red Rubies</td><td>$<span id="price-redRubies">?</span></td></tr>
-                    <tr><td>🔷 Blue Gems</td><td>$<span id="price-blueGems">?</span></td></tr>
-                    <tr><td>🌱 Green Poison</td><td>$<span id="price-greenPoison">?</span></td></tr>
-              </tbody>
-            </table>
+            <h2>📊 Market News</h2>
+            <p>Prior sell prices</p>
+            <div id="marketNewsContainer">
+              <div class="loading-status">Loading market news...</div>
+            </div>
           </div>
 
-        <div class="decision-section">
-            <h2>📦 Your Stockpiles</h2>
-          <table>
-            <thead>
-                    <tr>
-                        <th>Resource</th>
-                        <th>Available</th>
-                        <th>Protected</th>
-                        <th>Total</th>
-                    </tr>
-            </thead>
-                <tbody id="stockpile">
-                    <!-- Stockpile data will be inserted here by JavaScript -->
-                </tbody>
-          </table>
-    </div>
+
 
         <!-- Selling Decisions (FIRST - MORNING) -->
     <div class="decision-section">
@@ -1799,13 +1818,12 @@
       <div class="material-row">
         <div class="material-info">
           <div class="icon-container">
-            <span class="material-icon">💎</span><span style="font-size: 1.5em; color: #00ff00; margin-left: 5px;">💰</span>
+            <span class="material-icon">💎💰</span>
           </div>
           <div class="content-container">
-            <div><strong>Day <span id="sell-day-whiteDiamonds">?</span> Colony Needs: <span id="sell-need-whiteDiamonds" style="color: #ffff00;">15</span></strong> | Base Value: $20</div>
-            <div>Current Stockpiles: <span id="stockpiles-whiteDiamonds">Loading...</span></div>
-            <div>Total Available: <span id="total-available-whiteDiamonds">0</span></div>
-          </div>
+                <div><strong>Have: <span id="stockpiles-whiteDiamonds" style="color: #ffff00;">...</span></strong></div>
+                <div><strong>Colony Need: <span id="sell-need-whiteDiamonds" style="color: #ffffff;">15</span></strong></div>
+              </div>
         </div>
         <div class="sell-controls">
               <button type="button" onclick="adjustSell('whiteDiamonds', -1)">➖</button>
@@ -1817,13 +1835,12 @@
       <div class="material-row">
         <div class="material-info">
           <div class="icon-container">
-            <span class="material-icon">🔻</span><span style="font-size: 1.5em; color: #00ff00; margin-left: 5px;">💰</span>
+            <span class="material-icon">🔻💰</span>
           </div>
           <div class="content-container">
-            <div><strong>Day <span id="sell-day-redRubies">?</span> Colony Needs: <span id="sell-need-redRubies" style="color: #ffff00;">15</span></strong> | Base Value: $15</div>
-            <div>Current Stockpiles: <span id="stockpiles-redRubies">Loading...</span></div>
-            <div>Total Available: <span id="total-available-redRubies">0</span></div>
-          </div>
+                <div><strong>Have: <span id="stockpiles-redRubies" style="color: #ffff00;">...</span></strong></div>
+                <div><strong>Colony Need: <span id="sell-need-redRubies" style="color: #ffffff;">15</span></strong></div>
+              </div>
         </div>
         <div class="sell-controls">
               <button type="button" onclick="adjustSell('redRubies', -1)">➖</button>
@@ -1835,13 +1852,12 @@
       <div class="material-row">
         <div class="material-info">
           <div class="icon-container">
-            <span class="material-icon">🔷</span><span style="font-size: 1.5em; color: #00ff00; margin-left: 5px;">💰</span>
+            <span class="material-icon">🔷💰</span>
           </div>
           <div class="content-container">
-            <div><strong>Day <span id="sell-day-blueGems">?</span> Colony Needs: <span id="sell-need-blueGems" style="color: #ffff00;">15</span></strong> | Base Value: $12</div>
-            <div>Current Stockpiles: <span id="stockpiles-blueGems">Loading...</span></div>
-            <div>Total Available: <span id="total-available-blueGems">0</span></div>
-          </div>
+                <div><strong>Have: <span id="stockpiles-blueGems" style="color: #ffff00;">...</span></strong></div>
+                <div><strong>Colony Need: <span id="sell-need-blueGems" style="color: #ffffff;">15</span></strong></div>
+              </div>
         </div>
         <div class="sell-controls">
               <button type="button" onclick="adjustSell('blueGems', -1)">➖</button>
@@ -1853,13 +1869,12 @@
       <div class="material-row">
         <div class="material-info">
           <div class="icon-container">
-            <span class="material-icon">🌱</span><span style="font-size: 1.5em; color: #00ff00; margin-left: 5px;">💰</span>
+            <span class="material-icon">🌱💰</span>
           </div>
           <div class="content-container">
-            <div><strong>Day <span id="sell-day-greenPoison">?</span> Colony Needs: <span id="sell-need-greenPoison" style="color: #ffff00;">15</span></strong> | Base Value: $10</div>
-            <div>Current Stockpiles: <span id="stockpiles-greenPoison">Loading...</span></div>
-            <div>Total Available: <span id="total-available-greenPoison">0</span></div>
-          </div>
+                <div><strong>Have: <span id="stockpiles-greenPoison" style="color: #ffff00;">...</span></strong></div>
+                <div><strong>Colony Need: <span id="sell-need-greenPoison" style="color: #ffffff;">15</span></strong></div>
+              </div>
         </div>
         <div class="sell-controls">
               <button type="button" onclick="adjustSell('greenPoison', -1)">➖</button>
@@ -1871,7 +1886,7 @@
 
         <!-- Emergency Dump Section (AFTER Selling, BEFORE Mining) -->
         <div class="decision-section dump-section">
-          <h2>💰 Emergency Dump Safety Net</h2>
+          <h2>💰 $10 Flat-Rate Dump</h2>
           <p>Dump ONE resource type per day at guaranteed $10/unit. Use when market prices crash or you need emergency credits!</p>
           
           <div id="dumpAvailable" class="dump-available">
@@ -1928,10 +1943,10 @@
       <div class="material-row">
         <div class="material-info">
           <div class="icon-container">
-            <span class="material-icon">💎</span><span style="font-size: 1.5em; color: #00ccff; margin-left: 5px;">🤖</span>
+            <span class="material-icon">💎🤖</span>
           </div>
           <div class="content-container">
-            <div><strong>Day <span id="mining-day-whiteDiamonds">?</span> Colony Needs: <span id="mining-need-whiteDiamonds" style="color: #ffff00;">15</span></strong> | Base Value: $20</div>
+                              <div><strong>Colony Need: <span id="mining-need-whiteDiamonds" style="color: #ffff00;">15</span></strong></div>
           </div>
         </div>
         <div class="sell-controls">
@@ -1944,10 +1959,10 @@
       <div class="material-row">
         <div class="material-info">
           <div class="icon-container">
-            <span class="material-icon">🔻</span><span style="font-size: 1.5em; color: #00ccff; margin-left: 5px;">🤖</span>
+            <span class="material-icon">🔻🤖</span>
           </div>
           <div class="content-container">
-            <div><strong>Day <span id="mining-day-redRubies">?</span> Colony Needs: <span id="mining-need-redRubies" style="color: #ffff00;">15</span></strong> | Base Value: $15</div>
+                              <div><strong>Colony Need: <span id="mining-need-redRubies" style="color: #ffff00;">15</span></strong></div>
           </div>
         </div>
         <div class="sell-controls">
@@ -1960,10 +1975,10 @@
       <div class="material-row">
         <div class="material-info">
           <div class="icon-container">
-            <span class="material-icon">🔷</span><span style="font-size: 1.5em; color: #00ccff; margin-left: 5px;">🤖</span>
+            <span class="material-icon">🔷🤖</span>
           </div>
           <div class="content-container">
-            <div><strong>Day <span id="mining-day-blueGems">?</span> Colony Needs: <span id="mining-need-blueGems" style="color: #ffff00;">15</span></strong> | Base Value: $12</div>
+                              <div><strong>Colony Need: <span id="mining-need-blueGems" style="color: #ffff00;">15</span></strong></div>
           </div>
         </div>
         <div class="sell-controls">
@@ -1976,10 +1991,10 @@
       <div class="material-row">
         <div class="material-info">
           <div class="icon-container">
-            <span class="material-icon">🌱</span><span style="font-size: 1.5em; color: #00ccff; margin-left: 5px;">🤖</span>
+            <span class="material-icon">🌱🤖</span>
           </div>
           <div class="content-container">
-            <div><strong>Day <span id="mining-day-greenPoison">?</span> Colony Needs: <span id="mining-need-greenPoison" style="color: #ffff00;">15</span></strong> | Base Value: $10</div>
+                              <div><strong>Colony Need: <span id="mining-need-greenPoison" style="color: #ffff00;">15</span></strong></div>
           </div>
         </div>
         <div class="sell-controls">
@@ -1992,7 +2007,7 @@
 
         <!-- Raid Decisions (THIRD - NIGHT) -->
         <div class="decision-section">
-          <h2>⚔️ Raid Other Tribes</h2>
+          <h2>⚔️ Raid Other Tribes for 2🌱</h2>
           <p>Spend 2🌱 to attempt to raid 2 units of a resource from another player. Success is not guaranteed.</p>
       
       <div class="raid-controls">
@@ -2017,7 +2032,7 @@
         <!-- Dice Roll Section -->
         <div class="dice-section">
           <h3>🎲 Raid Success Chance</h3>
-          <p>Roll the dice to determine if your raid will succeed. Roll 2+ to attempt the raid.</p>
+          <p>Roll the dice ONCE to determine if your raid will succeed. Roll 2+ to attempt the raid. <strong>No rerolls allowed!</strong></p>
           
           <div class="dice-controls">
             <button type="button" id="rollDiceButton" onclick="rollDice()" class="dice-btn">
@@ -2109,12 +2124,13 @@
     <div id="gameEndModal" class="modal" style="display: none;">
       <div class="modal-content">
         <div class="modal-header">
-          <h2>🏆 GALACTIC CONQUEST COMPLETE! 🏆</h2>
+          <h2>GALACTIC CONQUEST COMPLETE!</h2>
         </div>
         <div class="modal-body">
           <div class="winner-showcase">
             <div class="winner-title">SUPREME COMMANDER</div>
             <div class="winner-name" id="modalWinnerName">Dave</div>
+            <div class="winner-tribe" id="modalWinnerTribe">🐻 Tribe of Endor</div>
             <div class="winner-score">$<span id="modalWinnerCredits">1000</span></div>
           </div>
           
@@ -2211,7 +2227,7 @@
             
             // Force refresh the submit button state
             if (gameData) {
-                updateSubmitButton();
+            updateSubmitButton();
             }
             
             // Reload game data to refresh the UI
@@ -2353,6 +2369,16 @@
             const diceResultElement = document.getElementById('diceResult');
             if (diceResultElement) diceResultElement.textContent = `Roll: ${rollResult}`;
             hasRolled = true;
+            
+            // Disable the roll button after rolling
+            const rollButton = document.getElementById('rollDiceButton');
+            if (rollButton) {
+                rollButton.disabled = true;
+                rollButton.textContent = '🎲 Rolled (Locked)';
+                rollButton.style.opacity = '0.6';
+                rollButton.style.cursor = 'not-allowed';
+            }
+            
             if (rollResult < 2) {
                 showMessage('💀 Dice roll failed! Raid will not be attempted.', 'error');
             } else {
@@ -2475,22 +2501,22 @@
             const modal = document.getElementById('resetGameModal');
             if (modal) modal.style.display = 'none';
         }
-        
+
         function resetGame() {
-            fetch('/reset-game', { method: 'POST' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.success) {
-                        localStorage.removeItem('playerId');
-                        window.location.href = '/'; // Redirect to login
-                    } else {
-                        showMessage(data.error, 'error');
-                    }
-                })
-                .catch(err => {
-                    console.error('Reset error:', err);
-                    showMessage('Failed to reset game', 'error');
-                });
+                fetch('/reset-game', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            localStorage.removeItem('playerId');
+                            window.location.href = '/'; // Redirect to login
+                        } else {
+                            showMessage(data.error, 'error');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Reset error:', err);
+                        showMessage('Failed to reset game', 'error');
+                    });
         }
 
         function updateDiceSection() {
@@ -2723,6 +2749,9 @@
                   lastNightSalesDiv.innerHTML = '<p>No sales last night.</p>';
                 }
             }
+            
+            // Load market news with fresh game data
+            loadMarketNews();
 
 
             // Update news feed (old simple feed) - this will be replaced by updateNewsDisplay
@@ -2866,7 +2895,7 @@
 
             updateRobotDisplay(); // Ensure robot display is updated after UI refresh
             updateDumpDisplay(); // Update dump section display
-            updateNewsDisplay(); // NEW: Update news display with structured news
+    
             updateSubmitButton(); // NEW: Update the submit button state
             updateAdminSection(); // NEW: Update the admin section visibility
             updateButtonStates(); // NEW: Update the state of +/- buttons
@@ -2917,36 +2946,25 @@
 
           data.players.forEach(player => {
             const card = document.createElement('div');
-            card.className = `player-status-card ${player.hasSubmitted ? 'active' : 'waiting'}`;
             
-            const statusClass = player.hasSubmitted ? 'active' : 'waiting';
-            const statusText = player.hasSubmitted ? '✅ Active' : '🟡 Waiting';
+            // Determine status class and text based on submission and activity
+            let statusClass, statusText;
+            if (player.hasSubmitted) {
+              statusClass = 'active';
+              statusText = 'Done';
+            } else if (player.credits > 0 || Object.values(player.stockpiles).some(val => val > 0)) {
+              statusClass = 'waiting';
+              statusText = 'Waiting';
+            } else {
+              statusClass = 'inactive';
+              statusText = 'Not logged in';
+            }
+            
+            card.className = `player-status-card ${statusClass}`;
             
             card.innerHTML = `
-              <div class="player-header-info">
-                <div>
-                  <div class="player-name">${player.name}</div>
-                  <div class="player-race">${player.race}</div>
-                </div>
-                <div class="player-status ${statusClass}">${statusText}</div>
-              </div>
-              
-              <div class="player-details">
-                <div class="player-stats">
-                  <div class="stat-item">
-                    <span class="stat-label">Credits:</span>
-                    <span class="stat-value">$${player.credits}</span>
-                  </div>
-                  <div class="stat-item">
-                    <span class="stat-label">Resources:</span>
-                    <span class="stat-value">${Object.values(player.stockpiles).reduce((sum, val) => sum + val, 0)}</span>
-                  </div>
-                </div>
-                
-                <div class="player-activity">
-                  ${player.details}
-                </div>
-              </div>
+              <div class="player-name">${player.name}</div>
+              <div class="player-status ${statusClass}">${statusText}</div>
             `;
 
             // Add click event to show more details
@@ -2957,16 +2975,7 @@
             dashboard.appendChild(card);
           });
 
-          // Update submission count in game status
-          const submittedCountElement = document.getElementById('submittedCount');
-          if (submittedCountElement) {
-            submittedCountElement.textContent = data.submittedCount;
-          }
-          
-          const activePlayerCountElement = document.getElementById('activePlayerCount');
-          if (activePlayerCountElement) {
-            activePlayerCountElement.textContent = data.totalPlayers;
-          }
+
         }
 
         // Show detailed player information
@@ -3006,6 +3015,8 @@
             });
         }
 
+
+
         // Display colony stockpiles in the table
         function displayColonyStockpiles(data) {
           const container = document.getElementById('colonyStockpilesContainer');
@@ -3025,12 +3036,11 @@
           const thead = document.createElement('thead');
           thead.innerHTML = `
             <tr>
-              <th>Player</th>
-              <th>💎 White Diamonds</th>
-              <th>🔻 Red Rubies</th>
-              <th>🔷 Blue Gems</th>
-              <th>🌱 Green Poison</th>
-              <th>Total</th>
+              <th></th>
+              <th>💎</th>
+              <th>🔻</th>
+              <th>🔷</th>
+              <th>🌱</th>
             </tr>
           `;
           table.appendChild(thead);
@@ -3045,21 +3055,19 @@
               let cellContent = '';
               let cssClass = 'resource-amount';
               
-              if (stockpile.source === 'none') {
-                cellContent = '0';
-                cssClass += ' none';
-              } else if (stockpile.source === 'mined') {
-                // Show current amount in white, then mined amount in green (+#)
-                const currentAmount = stockpile.amount - stockpile.mined;
-                const minedAmount = stockpile.mined;
-                cellContent = `<span style="color: #ffffff;">${currentAmount}</span> <span style="color: #00ff00;">(+${minedAmount})</span>`;
-                cssClass += ' mined';
-              } else if (stockpile.source === 'raided') {
-                cellContent = `${stockpile.amount}`;
-                cssClass += ' raided';
+              // Format: total/mined/raided (e.g., 17/7/2)
+              const total = stockpile.amount || 0;
+              const mined = stockpile.mined || 0;
+              const raided = stockpile.raided || 0;
+              
+              if (mined > 0 || raided > 0) {
+                let parts = [];
+                if (mined > 0) parts.push(`<span style="color: #00ff00;">${mined}</span>`);
+                if (raided > 0) parts.push(`<span style="color: #ffff00;">${raided}</span>`);
+                
+                cellContent = `${total}/<span style="color: #00ff00;">${mined}</span>/<span style="color: #ffff00;">${raided}</span>`;
               } else {
-                cellContent = `${stockpile.amount}`;
-                cssClass += ' held';
+                cellContent = `${total}`;
               }
               
               return `<td><span class="${cssClass}">${cellContent}</span></td>`;
@@ -3068,10 +3076,8 @@
             row.innerHTML = `
               <td>
                 <div class="player-name">${player.name}</div>
-                <div class="player-race">${player.race}</div>
               </td>
               ${resourceCells}
-              <td><strong>${player.totalResources}</strong></td>
             `;
             
             tbody.appendChild(row);
@@ -3087,48 +3093,13 @@
           if (!gameData || !gameData.gameStatus) return;
           
           const status = gameData.gameStatus;
-          const statusCurrentDayElement = document.getElementById('statusCurrentDay');
-          const daysRemainingElement = document.getElementById('daysRemaining');
-          const submittedCountElement = document.getElementById('submittedCount');
-          const activePlayerCountElement = document.getElementById('activePlayerCount');
-          const autoStatus = document.getElementById('autoAdvanceStatus');
-          const activeGameStatusElement = document.getElementById('activeGameStatus');
-          const gameEndedStatusElement = document.getElementById('gameEndedStatus');
-
-          if (status.isGameEnded) {
-            // Show game ended status
-            if (activeGameStatusElement) activeGameStatusElement.style.display = 'none';
-            if (gameEndedStatusElement) gameEndedStatusElement.style.display = 'block';
-            
-            if (gameData.winner) {
-              const winnerNameElement = document.getElementById('winnerName');
-              if (winnerNameElement) winnerNameElement.textContent = gameData.winner.name;
-              const winnerCreditsElement = document.getElementById('winnerCredits');
-              if (winnerCreditsElement) winnerCreditsElement.textContent = gameData.winner.credits;
-            }
-          } else {
-            // Show active game status
-            if (activeGameStatusElement) activeGameStatusElement.style.display = 'block';
-            if (gameEndedStatusElement) gameEndedStatusElement.style.display = 'none';
-            
-            if (statusCurrentDayElement) statusCurrentDayElement.textContent = status.currentDay;
-            if (daysRemainingElement) daysRemainingElement.textContent = status.daysRemaining;
-            
-            // Corrected access to submission status counts
-            if (submittedCountElement) submittedCountElement.textContent = status.submissionStatus.submittedCount;
-            if (activePlayerCountElement) activePlayerCountElement.textContent = status.submissionStatus.activeCount;
-            
-            // Update auto-advance status
-            if (autoStatus) { // Add null check
-                if (status.canAutoAdvance) {
-                  autoStatus.textContent = '🤖 Ready to auto-advance!';
-                  autoStatus.style.color = '#00ff00';
-                  showAutoAdvanceNotification();
-        } else {
-                  autoStatus.textContent = '⏳ Waiting for submissions...';
-                  autoStatus.style.color = '#ffff00';
-                  hideAutoAdvanceNotification();
-                }
+          
+          // Handle auto-advance notifications if game is not ended
+          if (!status.isGameEnded) {
+            if (status.canAutoAdvance) {
+              showAutoAdvanceNotification();
+            } else {
+              hideAutoAdvanceNotification();
             }
           }
         }
@@ -3515,78 +3486,170 @@
           });
         }
 
-        // News display functions
-        // Load news categories
-        function loadNewsCategories() {
-          fetch('/news-categories')
+        // Raid News functions
+        // Load raid news only
+        function loadRaidNews() {
+          fetch('/structured-news/3')
             .then(res => res.json())
-            .then(categories => {
-              newsCategories = categories;
+            .then(data => {
+              if (data.error) {
+                console.error('Failed to load raid news:', data.error);
+                return;
+              }
+              displayRaidNews(data.structuredNews);
             })
             .catch(err => {
-              console.error('Failed to load news categories:', err);
-              // Fallback categories
-              newsCategories = {
-                raid: { icon: '⚔️', color: '#ff6666', title: 'Raid Operations' },
-                block: { icon: '🛡️', color: '#66ccff', title: 'Block Operations' }
-              };
+              console.error('Error loading raid news:', err);
             });
         }
 
-        // Toggle between structured and simple news view
-        function toggleNewsView(view) {
-          currentNewsView = view;
+        // Display raid news in a simple format
+        function displayRaidNews(newsData) {
+          const container = document.getElementById('raidNewsContainer');
+          if (!container) return;
           
-          // Update button states
-          document.querySelectorAll('.news-toggle').forEach(btn => {
-            btn.classList.remove('active');
-          });
-          const activeToggleBtn = document.querySelector(`[data-view="${view}"]`);
-          if (activeToggleBtn) activeToggleBtn.classList.add('active');
-          
-          // Show/hide views
-          const structuredNewsViewElement = document.getElementById('structuredNewsView');
-          const simpleNewsViewElement = document.getElementById('simpleNewsView');
-          if (structuredNewsViewElement && simpleNewsViewElement) { // Add null check
-            if (view === 'structured') {
-              structuredNewsViewElement.style.display = 'block';
-              simpleNewsViewElement.style.display = 'none';
-              renderStructuredNews();
-        } else {
-              structuredNewsViewElement.style.display = 'none';
-              simpleNewsViewElement.style.display = 'block';
-              renderSimpleNews();
-            }
-          }
-        }
-
-        // Filter news by category
-        function filterNews() {
-          const newsFilterElement = document.getElementById('newsFilter');
-          if (newsFilterElement) currentNewsFilter = newsFilterElement.value;
-          
-          if (currentNewsView === 'structured') {
-            renderStructuredNews();
-      } else {
-            renderSimpleNews();
-          }
-        }
-
-        // Render structured news
-        function renderStructuredNews() {
-          const container = document.getElementById('structuredNewsContainer');
-          if (!window.newsData || !container) { // Use global news data instead
-            if (container) container.innerHTML = '<div class="no-news">No raid or block news available</div>';
+          if (!newsData || newsData.length === 0) {
+            container.innerHTML = '<div class="no-news">No raid news available</div>';
             return;
           }
           
           container.innerHTML = '';
           
-          window.newsData.forEach(dayData => {
-            const daySection = createDaySection(dayData);
-            container.appendChild(daySection);
+          newsData.forEach(dayData => {
+            // Only show days that have raid or block news
+            const raidNews = dayData.raid || [];
+            const blockNews = dayData.block || [];
+            
+            if (raidNews.length > 0 || blockNews.length > 0) {
+              const daySection = document.createElement('div');
+              daySection.className = 'news-day-section';
+              daySection.innerHTML = `
+                <div class="news-day-header">
+                  <div class="day-title">📅 Day ${dayData.day}</div>
+                  <div class="day-stats">
+                    <span>⚔️ ${raidNews.length} raids</span>
+                    <span>🛡️ ${blockNews.length} blocks</span>
+                  </div>
+                </div>
+                <div class="news-day-content">
+                  ${raidNews.map(news => `<div class="news-item raid-news">⚔️ ${news.message}</div>`).join('')}
+                  ${blockNews.map(news => `<div class="news-item block-news">🛡️ ${news.message}</div>`).join('')}
+                </div>
+              `;
+              container.appendChild(daySection);
+            }
           });
         }
+
+        // Load and display market news
+        let marketNewsLoading = false; // Prevent multiple simultaneous calls
+        
+        function loadMarketNews() {
+          if (marketNewsLoading) {
+            console.log('Market News - Already loading, skipping duplicate call');
+            return;
+          }
+          
+          marketNewsLoading = true;
+          const playerId = localStorage.getItem('playerId');
+          if (!playerId) {
+            console.error('No player ID found for market news');
+            marketNewsLoading = false;
+            return;
+          }
+          
+          console.log('Market News - Loading fresh data...');
+          
+          fetch('/game-data/' + playerId)
+            .then(res => res.json())
+            .then(data => {
+              if (data.error) {
+                console.error('Failed to load market news:', data.error);
+                return;
+              }
+              displayMarketNews(data.gameState);
+            })
+            .catch(err => {
+              console.error('Error loading market news:', err);
+            })
+            .finally(() => {
+              marketNewsLoading = false;
+            });
+        }
+
+        // Display market news in table format
+        function displayMarketNews(gameState) {
+          const container = document.getElementById('marketNewsContainer');
+          if (!container) return;
+          
+          console.log('Market News - Game State:', gameState); // Debug log
+          
+          if (!gameState || !gameState.currentDay) {
+            container.innerHTML = '<div class="no-news">No market data available</div>';
+            return;
+          }
+          
+          const currentDay = gameState.currentDay;
+          const priceHistory = gameState.priceHistory || [];
+          
+          console.log('Market News - Price History:', priceHistory); // Debug log
+          console.log('Market News - Current Day:', currentDay); // Debug log
+          console.log('Market News - Price History Details:', JSON.stringify(priceHistory, null, 2)); // Detailed log
+          console.log('Market News - Full Game State Keys:', Object.keys(gameState)); // See all available data
+          console.log('Market News - Price History Type:', typeof priceHistory); // Check if it's an array
+          console.log('Market News - Price History Length:', priceHistory.length); // Check length
+          
+          if (priceHistory.length === 0) {
+            container.innerHTML = '<div class="no-news">No price history available yet. Game may need to progress to Day 2+ for price data.</div>';
+            return;
+          }
+          
+          // Debug: Check if we're getting the right data structure
+          console.log('Market News - First day data:', priceHistory[0]);
+          console.log('Market News - All days data:', priceHistory);
+          
+          // Create table similar to colony stockpiles
+          const table = document.createElement('table');
+          table.className = 'colony-stockpiles-table';
+          
+          // Create header
+          const thead = document.createElement('thead');
+          thead.innerHTML = `
+            <tr>
+              <th></th>
+              <th>💎</th>
+              <th>🔻</th>
+              <th>🔷</th>
+              <th>🌱</th>
+            </tr>
+          `;
+          table.appendChild(thead);
+          
+          // Create body with rows for all prior days
+          const tbody = document.createElement('tbody');
+          
+          // Show all days from price history
+          priceHistory.forEach((dayData, index) => {
+            const row = document.createElement('tr');
+            // Only show "Base Price" for the first entry (index 0), show "Day X" for all others
+            const dayLabel = index === 0 ? 'Base Price' : `Day ${dayData.day}`;
+            row.innerHTML = `
+              <td><strong>${dayLabel}</strong></td>
+              <td><span class="resource-amount">$${dayData.whiteDiamonds}</span></td>
+              <td><span class="resource-amount">$${dayData.redRubies}</span></td>
+              <td><span class="resource-amount">$${dayData.blueGems}</span></td>
+              <td><span class="resource-amount">$${dayData.greenPoison}</span></td>
+            `;
+            tbody.appendChild(row);
+          });
+          
+          table.appendChild(tbody);
+          
+          container.innerHTML = '';
+          container.appendChild(table);
+        }
+
+
 
         // Create a day section for structured news
         function createDaySection(dayData) {
@@ -3705,54 +3768,9 @@
           return section;
         }
 
-        // Render simple news (fallback)
-        function renderSimpleNews() {
-          const newsBoard = document.getElementById('newsBoard');
-          if (newsBoard) { // Add null check
-            newsBoard.innerHTML = '';
-            
-            if (gameData && gameData.news && gameData.news.length > 0) {
-              gameData.news.slice(-15).forEach(newsItem => {
-                const li = document.createElement('li');
-                li.textContent = newsItem;
-                newsBoard.appendChild(li);
-              });
-            } else {
-              const li = document.createElement('li');
-              li.textContent = 'No news yet...';
-              li.style.fontStyle = 'italic';
-              newsBoard.appendChild(li);
-            }
-          }
-        }
 
-        // Fetch news data from the backend
-        function fetchNewsData() {
-          fetch('/structured-news/3')
-            .then(res => res.json())
-            .then(data => {
-              if (data.structuredNews) {
-                // Store news data globally so renderStructuredNews can access it
-                window.newsData = data.structuredNews;
-                renderStructuredNews();
-              }
-            })
-            .catch(err => {
-              console.error('Failed to fetch news:', err);
-              // Fallback to simple news
-              renderSimpleNews();
-            });
-        }
 
-        // Update news display (call this in your existing updateUI function)
-        function updateNewsDisplay() {
-          if (currentNewsView === 'structured') {
-            // Fetch fresh news data
-            fetchNewsData();
-          } else {
-            renderSimpleNews();
-          }
-        }
+
 
         // Add event listener for dump resource selection
         document.addEventListener('DOMContentLoaded', function() {
@@ -3760,7 +3778,8 @@
           if (dumpResourceSelect) {
             dumpResourceSelect.addEventListener('change', onDumpResourceChange);
           }
-          loadNewsCategories(); // Load news categories on DOMContentLoaded
+          loadRaidNews(); // Load raid news on DOMContentLoaded
+          // Market news will be loaded after game data is loaded
         });
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -3781,7 +3800,7 @@
             
             // Only load game data if we have a valid playerId
             loadGameDataEnhanced();
-        });
+    });
   </script>
   
   <!-- Logout Button at Bottom -->
