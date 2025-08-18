@@ -444,6 +444,7 @@ db.serialize(() => {
       stockpiles TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       protected_resources TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       lastEfforts TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      last_night_earnings INTEGER DEFAULT 0,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
@@ -472,6 +473,9 @@ db.serialize(() => {
       market_prices TEXT DEFAULT '{"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}',
       colony_needs TEXT DEFAULT '{"whiteDiamonds":15,"redRubies":15,"blueGems":15,"greenPoison":15}',
       last_supply TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      daily_sales_totals TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+      price_history TEXT DEFAULT '[{"day":1,"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}]',
+      colony_needs_history TEXT DEFAULT '[{"day":1,"whiteDiamonds":15,"redRubies":15,"blueGems":15,"greenPoison":15}]',
       active_players INTEGER DEFAULT 0,
       last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
@@ -517,7 +521,27 @@ db.serialize(() => {
   `);
 
   // Initialize game state if not exists
-  db.run(`INSERT OR IGNORE INTO game_state (id, current_day) VALUES (1, 1)`);
+  db.run(`INSERT OR IGNORE INTO game_state (
+    id, 
+    current_day, 
+    market_prices, 
+    colony_needs, 
+    last_supply, 
+    daily_sales_totals, 
+    price_history, 
+    colony_needs_history, 
+    active_players
+  ) VALUES (
+    1, 
+    1, 
+    '{"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}',
+    '{"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}',
+    '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+    '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
+    '[{"day":1,"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}]',
+    '[{"day":1,"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}]',
+    0
+  )`);
 
   db.run(`ALTER TABLE players ADD COLUMN protected_resources TEXT DEFAULT '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}'`, (err) => {
     if (err && !err.message.includes('duplicate column name')) {
@@ -1791,15 +1815,15 @@ app.post('/reset-game', (req, res) => {
       }
     });
     
-    // Reset game state to Day 0 with correct starting colony needs
+    // Reset game state to Day 1 with correct starting colony needs
     db.run(`UPDATE game_state SET 
-      current_day = 0,
+      current_day = 1,
       market_prices = '{"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}',
       colony_needs = '{"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}',
       last_supply = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       daily_sales_totals = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
-      price_history = '[{"day":0,"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}]',
-      colony_needs_history = '[{"day":0,"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}]',
+      price_history = '[{"day":1,"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}]',
+      colony_needs_history = '[{"day":1,"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}]',
       active_players = 0,
       last_updated = CURRENT_TIMESTAMP
       WHERE id = 1`, (err) => {
@@ -1813,7 +1837,7 @@ app.post('/reset-game', (req, res) => {
       
       // Add welcome news for new game
       db.run('INSERT INTO news (day, message, category, priority) VALUES (?, ?, ?, ?)', 
-        [0, `🚀 New ${GAME_CONFIG.GAME_DURATION_DAYS}-day galactic conquest begins! May the best commander win!`, 'general', 3], (err) => {
+        [1, `🚀 New ${GAME_CONFIG.GAME_DURATION_DAYS}-day galactic conquest begins! May the best commander win!`, 'general', 3], (err) => {
         if (err) {
           console.error('Error adding welcome news in /reset-game:', {
             error: err.message,
