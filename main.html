@@ -2798,78 +2798,10 @@
             }
 
 
-            // Populate raid target dropdown
-            const raidTargetSelect = document.getElementById('raidTarget');
-            if (raidTargetSelect) {
-                console.log('🔍 Populating raid target dropdown...');
-                console.log('🔍 Player status data:', window.playerStatusData);
-                console.log('🔍 Current player:', gameData.player);
-                
-                raidTargetSelect.innerHTML = '<option value="none">None</option>';
-                
-                // Use player status data if available, otherwise show loading
-                if (window.playerStatusData && Array.isArray(window.playerStatusData.players)) {
-                    window.playerStatusData.players.forEach(player => {
-                        if (player.name !== gameData.player?.name) { // Cannot raid self
-                            const option = document.createElement('option');
-                            option.value = player.name;
-                            option.textContent = player.name;
-                            raidTargetSelect.appendChild(option);
-                        }
-                    });
-                } else {
-                    // Add placeholder options while loading
-                    const placeholderNames = ['Silas', 'Chris', 'Brian', 'Joel', 'Curtis'];
-                    placeholderNames.forEach(name => {
-                        if (name !== gameData.player?.name) {
-                            const option = document.createElement('option');
-                            option.value = name;
-                            option.textContent = name;
-                            raidTargetSelect.appendChild(option);
-                        }
-                    });
-                }
-                
-                // Set selected raid target if it exists in gameData
-                if (gameData.raidTarget && gameData.raidTarget !== 'none') {
-                    raidTargetSelect.value = gameData.raidTarget;
-                } else {
-                    raidTargetSelect.value = 'none';
-                }
-            }
+            // Raid target dropdown is now populated by populateRaidTargetDropdown() when player status is loaded
 
 
-            // Populate block targets (same as raid targets)
-            const blockTarget = document.getElementById('blockTarget');
-            if (blockTarget) {
-              blockTarget.innerHTML = '<option value="none">None</option>';
-              
-              // Use player status data if available, otherwise show loading
-              if (window.playerStatusData && Array.isArray(window.playerStatusData.players)) {
-                  window.playerStatusData.players.forEach(player => {
-                      if (player.name !== gameData.player?.name) { // Cannot block self
-                          const option = document.createElement('option');
-                          option.value = player.name;
-                          option.textContent = player.name;
-                          if (gameData.blockTarget === player.name) {
-                              option.selected = true;
-                          }
-                          blockTarget.appendChild(option);
-                      }
-                  });
-              } else {
-                  // Add placeholder options while loading
-                  const placeholderNames = ['Silas', 'Chris', 'Brian', 'Joel', 'Curtis'];
-                  placeholderNames.forEach(name => {
-                      if (name !== gameData.player?.name) {
-                          const option = document.createElement('option');
-                          option.value = name;
-                          option.textContent = name;
-                          blockTarget.appendChild(option);
-                      }
-                  });
-              }
-            }
+            // Block target dropdown is now populated by populateRaidTargetDropdown() when player status is loaded
 
             // Set current efforts
             if (gameData.efforts) {
@@ -2941,10 +2873,75 @@
               window.playerStatusData = data;
               
               displayPlayerStatus(data);
+              
+              // Populate raid target dropdown with fresh data
+              populateRaidTargetDropdown();
             })
             .catch(err => {
               console.error('Error loading player status:', err);
             });
+        }
+        
+        // Populate raid target dropdown with current player status data
+        function populateRaidTargetDropdown() {
+          console.log('🔍 populateRaidTargetDropdown called...');
+          console.log('🔍 Player status data:', window.playerStatusData);
+          
+          const raidTargetSelect = document.getElementById('raidTarget');
+          if (raidTargetSelect) {
+            console.log('🔍 Populating raid target dropdown...');
+            
+            raidTargetSelect.innerHTML = '<option value="none">None</option>';
+            
+            // Use player status data if available
+            if (window.playerStatusData && Array.isArray(window.playerStatusData.players)) {
+              window.playerStatusData.players.forEach(player => {
+                // Get current player name from localStorage or gameData
+                const currentPlayerName = localStorage.getItem('playerName') || 'Unknown';
+                
+                if (player.name !== currentPlayerName) { // Cannot raid self
+                  const option = document.createElement('option');
+                  option.value = player.name;
+                  option.textContent = player.name;
+                  raidTargetSelect.appendChild(option);
+                  console.log(`🔍 Added raid target: ${player.name}`);
+                }
+              });
+            } else {
+              console.log('🔍 No player status data available, using fallback names');
+              // Add fallback options
+              const fallbackNames = ['Dave', 'Silas', 'Chris', 'Brian', 'Joel', 'Curtis'];
+              const currentPlayerName = localStorage.getItem('playerName') || 'Unknown';
+              
+              fallbackNames.forEach(name => {
+                if (name !== currentPlayerName) {
+                  const option = document.createElement('option');
+                  option.value = name;
+                  option.textContent = name;
+                  raidTargetSelect.appendChild(option);
+                }
+              });
+            }
+          }
+          
+          // Also populate block target dropdown
+          const blockTarget = document.getElementById('blockTarget');
+          if (blockTarget) {
+            blockTarget.innerHTML = '<option value="none">None</option>';
+            
+            if (window.playerStatusData && Array.isArray(window.playerStatusData.players)) {
+              const currentPlayerName = localStorage.getItem('playerName') || 'Unknown';
+              
+              window.playerStatusData.players.forEach(player => {
+                if (player.name !== currentPlayerName) { // Cannot block self
+                  const option = document.createElement('option');
+                  option.value = player.name;
+                  option.textContent = player.name;
+                  blockTarget.appendChild(option);
+                }
+              });
+            }
+          }
         }
 
         // Display player status in the dashboard

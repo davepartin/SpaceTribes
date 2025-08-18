@@ -186,6 +186,7 @@
                 } else {
                     // Login successful
                     localStorage.setItem('playerId', data.playerId);
+                    localStorage.setItem('playerName', name); // Store player name for raid target filtering
                     
                     if (data.firstTime) {
                         showMessage('PIN created successfully! Welcome to Space Tribes! Redirecting...', 'success');
