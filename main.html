@@ -2946,12 +2946,17 @@
 
         // Display player status in the dashboard
         function displayPlayerStatus(data) {
+          console.log('🔍 displayPlayerStatus called with data:', data);
+          
           const dashboard = document.getElementById('playersDashboard');
           if (!dashboard) return;
 
           dashboard.innerHTML = '';
 
           data.players.forEach(player => {
+            console.log(`🔍 Player ${player.name}:`, player);
+            console.log(`🔍 hasSubmitted: ${player.hasSubmitted}`);
+            
             const card = document.createElement('div');
             
             // Determine status class and text based on submission and activity
@@ -2959,12 +2964,10 @@
             if (player.hasSubmitted) {
               statusClass = 'active';
               statusText = 'Done';
-            } else if (player.credits > 0 || Object.values(player.stockpiles).some(val => val > 0)) {
-              statusClass = 'waiting';
-              statusText = 'Waiting';
             } else {
-              statusClass = 'inactive';
-              statusText = 'Not logged in';
+              // Player is logged in but hasn't submitted decisions yet
+              statusClass = 'waiting';
+              statusText = 'Not Submitted';
             }
             
             card.className = `player-status-card ${statusClass}`;
