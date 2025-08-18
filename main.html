@@ -2801,12 +2801,16 @@
             // Populate raid target dropdown
             const raidTargetSelect = document.getElementById('raidTarget');
             if (raidTargetSelect) {
+                console.log('🔍 Populating raid target dropdown...');
+                console.log('🔍 Player status data:', window.playerStatusData);
+                console.log('🔍 Current player:', gameData.player);
+                
                 raidTargetSelect.innerHTML = '<option value="none">None</option>';
                 
                 // Use player status data if available, otherwise show loading
                 if (window.playerStatusData && Array.isArray(window.playerStatusData.players)) {
                     window.playerStatusData.players.forEach(player => {
-                        if (player.id !== gameData.player?.id) { // Cannot raid self
+                        if (player.name !== gameData.player?.name) { // Cannot raid self
                             const option = document.createElement('option');
                             option.value = player.name;
                             option.textContent = player.name;
@@ -2922,6 +2926,7 @@
 
         // Load and display player status
         function loadPlayerStatus() {
+          console.log('🔍 Loading player status...');
           fetch('/players-status')
             .then(res => res.json())
             .then(data => {
@@ -2929,6 +2934,8 @@
                 console.error('Failed to load player status:', data.error);
                 return;
               }
+              
+              console.log('🔍 Player status data received:', data);
               
               // Store player status data globally for raid target population
               window.playerStatusData = data;
