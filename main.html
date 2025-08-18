@@ -2656,6 +2656,9 @@
             // Update player status (new centralized function)
             updatePlayerStatus();
             
+            // Refresh player status data for raid target dropdown
+            loadPlayerStatus();
+            
             // Update day numbers and colony needs
             const sellDayNumberElement = document.getElementById('sellDayNumber');
             if (sellDayNumberElement) sellDayNumberElement.textContent = gameData.gameState?.currentDay || '?';
