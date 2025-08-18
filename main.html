@@ -3070,11 +3070,10 @@
               const mined = stockpile.mined || 0;
               const raided = stockpile.raided || 0;
               
+              // Debug logging
+              console.log(`🔍 Colony Stockpiles Debug - ${player.name} ${resource}:`, stockpile);
+              
               if (mined > 0 || raided > 0) {
-                let parts = [];
-                if (mined > 0) parts.push(`<span style="color: #00ff00;">${mined}</span>`);
-                if (raided > 0) parts.push(`<span style="color: #ffff00;">${raided}</span>`);
-                
                 cellContent = `${total}/<span style="color: #00ff00;">${mined}</span>/<span style="color: #ffff00;">${raided}</span>`;
               } else {
                 cellContent = `${total}`;
