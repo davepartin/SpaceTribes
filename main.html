@@ -1760,7 +1760,7 @@
         <!-- Colony Stockpiles - Public View -->
         <div class="decision-section">
           <h2>🏛️ Colony Stockpiles - Day <span id="colonyStockpilesDay">?</span></h2>
-          <p><span style="color: #ffffff;">Total</span> / <span style="color: #00ff00;">Was Mined</span> / <span style="color: #ffff00;">Was Raided</span> Yesterday</p>
+          <p>Current total resources for each player. Mining and raiding details are shown in the Daily News section below.</p>
           
           <div style="text-align: center; margin-bottom: 20px;">
 
@@ -3077,24 +3077,9 @@
             
             const resourceCells = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'].map(resource => {
               const stockpile = player.stockpiles[resource];
-              let cellContent = '';
-              let cssClass = 'resource-amount';
-              
-              // Format: total/mined/raided (e.g., 17/7/2)
               const total = stockpile.amount || 0;
-              const mined = stockpile.mined || 0;
-              const raided = stockpile.raided || 0;
               
-              // Debug logging
-              console.log(`🔍 Colony Stockpiles Debug - ${player.name} ${resource}:`, stockpile);
-              
-              if (mined > 0 || raided > 0) {
-                cellContent = `${total}/<span style="color: #00ff00;">${mined}</span>/<span style="color: #ffff00;">${raided}</span>`;
-              } else {
-                cellContent = `${total}`;
-              }
-              
-              return `<td><span class="${cssClass}">${cellContent}</span></td>`;
+              return `<td><span class="resource-amount">${total}</span></td>`;
             }).join('');
 
             row.innerHTML = `
@@ -3510,26 +3495,26 @@
         }
 
         // Raid News functions
-        // Load raid news only
+        // Load most recent news only
         function loadRaidNews() {
-          console.log('🔍 Loading raid news...');
-          fetch('/structured-news/3')
+          console.log('🔍 Loading most recent news...');
+          fetch('/structured-news/1')
             .then(res => res.json())
             .then(data => {
               if (data.error) {
-                console.error('Failed to load raid news:', data.error);
+                console.error('Failed to load news:', data.error);
                 return;
               }
-              console.log('🔍 Raid news data received:', data);
+              console.log('🔍 News data received:', data);
               console.log('🔍 Structured news:', data.structuredNews);
               displayRaidNews(data.structuredNews);
             })
             .catch(err => {
-              console.error('Error loading raid news:', err);
+              console.error('Error loading news:', err);
             });
         }
 
-        // Display all news in a simple format
+        // Display most recent news in a simple format
         function displayRaidNews(newsData) {
           console.log('🔍 displayRaidNews called with:', newsData);
           
@@ -3847,7 +3832,7 @@
           if (dumpResourceSelect) {
             dumpResourceSelect.addEventListener('change', onDumpResourceChange);
           }
-          loadRaidNews(); // Load raid news on DOMContentLoaded
+          loadRaidNews(); // Load most recent news on DOMContentLoaded
           // Market news will be loaded after game data is loaded
         });
 
