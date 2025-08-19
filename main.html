@@ -2051,20 +2051,18 @@
         </div>
       </div>
       
-        <!-- Blocking Decisions (FOURTH - DEFENSE) -->
+        <!-- Blocking System Info (FOURTH - DEFENSE) -->
         <div class="decision-section" style="background: rgba(0, 255, 0, 0.05); border: 2px solid rgba(0, 255, 0, 0.3);">
-          <h2>🛡️ Block Raids</h2>
-          <p>Choose ONE player to block from raiding you tonight. You can completely stop one raid attempt.</p>
-          
-          <div class="raid-controls">
-            <div class="raid-dropdown">
-              <label>Choose Player to Block:</label>
-              <select id="blockTarget">
-                <option value="none">None</option>
-              </select>
+          <h2>🛡️ New Raiding System</h2>
+          <p><strong>BLOCKING SYSTEM REMOVED!</strong> The new raiding system is much simpler:</p>
+          <ul style="text-align: left; margin: 10px 0;">
+            <li>⚔️ <strong>Raiding Order:</strong> Players raid in order from lowest to highest credits</li>
+            <li>💰 <strong>Dump First:</strong> You can dump resources BEFORE being raided to protect them</li>
+            <li>🎯 <strong>No Protection:</strong> Anyone can raid anyone, but timing matters!</li>
+            <li>📊 <strong>Strategy:</strong> Dump valuable resources before higher-credit players raid you</li>
+          </ul>
+          <p><em>Your current rank: <span id="playerRank">Loading...</span></em></p>
         </div>
-      </div>
-    </div>
 
         <!-- Submit Decisions Button (Replace the current submit button area) -->
     <div class="button-group">
@@ -2412,7 +2410,6 @@
 
             const raidTarget = document.getElementById('raidTarget').value;
             const raidMaterial = document.getElementById('raidMaterial').value || null;
-            const blockTarget = document.getElementById('blockTarget').value;
 
             // Validate raid selection
             if (raidTarget !== 'none' && !raidMaterial) {
@@ -2442,8 +2439,7 @@
                 efforts: robotAssignments,
                 sales: sellAssignments,
                 raidTarget: rollResult >= 2 ? (raidTarget === 'none' ? null : raidTarget) : null,
-                raidMaterial: rollResult >= 2 ? raidMaterial : null,
-                blockTarget: blockTarget || 'none'
+                raidMaterial: rollResult >= 2 ? raidMaterial : null
             };
 
             // Validate dump selection (prevent selling and dumping same resources)
@@ -2924,24 +2920,7 @@
             }
           }
           
-          // Also populate block target dropdown
-          const blockTarget = document.getElementById('blockTarget');
-          if (blockTarget) {
-            blockTarget.innerHTML = '<option value="none">None</option>';
-            
-            if (window.playerStatusData && Array.isArray(window.playerStatusData.players)) {
-              const currentPlayerName = localStorage.getItem('playerName') || 'Unknown';
-              
-              window.playerStatusData.players.forEach(player => {
-                if (player.name !== currentPlayerName) { // Cannot block self
-                  const option = document.createElement('option');
-                  option.value = player.name;
-                  option.textContent = player.name;
-                  blockTarget.appendChild(option);
-                }
-              });
-            }
-          }
+          // Block target population removed - blocking system no longer used
         }
 
         // Display player status in the dashboard
@@ -2985,7 +2964,43 @@
             dashboard.appendChild(card);
           });
 
-
+          // Update player rank after displaying status
+          updatePlayerRank();
+        }
+        
+        // Update player rank display
+        function updatePlayerRank() {
+          const playerRankElement = document.getElementById('playerRank');
+          if (!playerRankElement) return;
+          
+          if (window.playerStatusData && Array.isArray(window.playerStatusData.players)) {
+            // Sort players by credits (highest first for ranking)
+            const sortedPlayers = [...window.playerStatusData.players].sort((a, b) => (b.credits || 0) - (a.credits || 0));
+            
+            // Find current player's rank
+            const currentPlayerName = localStorage.getItem('playerName');
+            if (currentPlayerName) {
+              const playerIndex = sortedPlayers.findIndex(p => p.name === currentPlayerName);
+              if (playerIndex !== -1) {
+                const rank = playerIndex + 1;
+                const totalPlayers = sortedPlayers.length;
+                
+                if (rank <= 3) {
+                  playerRankElement.innerHTML = `<span style="color: #ffd700;">🏆 TOP ${rank} ($${sortedPlayers[playerIndex].credits || 0})</span>`;
+                } else if (rank === totalPlayers) {
+                  playerRankElement.innerHTML = `<span style="color: #ff6b6b;">🥉 LAST PLACE ($${sortedPlayers[playerIndex].credits || 0})</span>`;
+                } else {
+                  playerRankElement.innerHTML = `<span style="color: #87ceeb;">📊 #${rank} of ${totalPlayers} ($${sortedPlayers[playerIndex].credits || 0})</span>`;
+                }
+              } else {
+                playerRankElement.innerHTML = 'Unknown';
+              }
+            } else {
+              playerRankElement.innerHTML = 'Not logged in';
+            }
+          } else {
+            playerRankElement.innerHTML = 'Loading...';
+          }
         }
 
         // Show detailed player information
@@ -3306,8 +3321,7 @@
               if (raidTargetElement) raidTargetElement.value = 'none';
               const raidMaterialElement = document.getElementById('raidMaterial');
               if (raidMaterialElement) raidMaterialElement.value = '';
-              const blockTargetElement = document.getElementById('blockTarget'); // Added null check for blockTarget
-              if (blockTargetElement) blockTargetElement.value = 'none'; // Reset block target
+              // Block target reset removed - blocking system no longer used
               updateDiceSection(); // Reset dice display
               
               // Clear submission status for the processed day

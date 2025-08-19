@@ -104,7 +104,6 @@ function processCoreDayLogic(currentDay, players, decisions, gameState, callback
         sales: JSON.parse(decision.sales || '{}'),
         raidTarget: decision.raidTarget || 'none',
         raidMaterial: decision.raidMaterial || 'none',
-        blockTarget: decision.blockTarget || 'none',
         dumpResource: decision.dumpResource || 'none',
         dumpAmount: decision.dumpAmount || 0
       };
@@ -166,7 +165,8 @@ function processCoreDayLogic(currentDay, players, decisions, gameState, callback
       }
     });
     
-    // STEP 2.5: DUMP PROCESSING - Process emergency dumps
+    // STEP 2.5: DUMP PROCESSING - Process emergency dumps BEFORE raiding
+    console.log('💰 Dump phase - processing emergency dumps...');
     players.forEach(player => {
       const pdata = playerData[player.id];
       const decision = decisionMap[player.id];
@@ -184,89 +184,78 @@ function processCoreDayLogic(currentDay, players, decisions, gameState, callback
           pdata.last_night_earnings += dumpEarnings;
           
           news.push(`🚨 ${player.name} emergency dumped ${dumpAmount} ${getResourceIcon(dumpResource)} for $${dumpEarnings}`);
+          console.log(`💰 ${player.name} dumped ${dumpAmount} ${dumpResource} for $${dumpEarnings}`);
         }
       }
     });
     
-    // STEP 4: COMBAT PHASE - Resolve raids and blocks
-    console.log('⚔️ Combat phase - resolving raids and blocks...');
+    // STEP 3: RAIDING PHASE - Resolve raids in order from lowest to highest credits
+    console.log('⚔️ Raiding phase - resolving raids from lowest to highest credits...');
     
-    // Debug: Log all decisions for combat
-    console.log('🔍 Combat Debug - All decisions:', decisionMap);
-    console.log('🔍 Combat Debug - All players:', players.map(p => ({ id: p.id, name: p.name })));
+    // Sort players by credits (lowest first) and submission time for ties
+    const playersForRaiding = players.map(player => ({
+      ...player,
+      credits: playerData[player.id].credits,
+      submittedAt: decisionMap[player.id]?.submittedAt || Date.now()
+    })).sort((a, b) => {
+      // First sort by credits (lowest first)
+      if (a.credits !== b.credits) {
+        return a.credits - b.credits;
+      }
+      // If credits are equal, sort by submission time (earlier first)
+      return a.submittedAt - b.submittedAt;
+    });
     
-    players.forEach(player => {
+    console.log('🔍 Raiding order (lowest to highest credits):', playersForRaiding.map(p => `${p.name} ($${p.credits})`));
+    
+    // Process raids in order
+    playersForRaiding.forEach(player => {
       const pdata = playerData[player.id];
       const decision = decisionMap[player.id];
       
-      console.log(`🔍 Combat Debug - Player ${player.name}:`, {
-        hasDecision: !!decision,
-        raidTarget: decision?.raidTarget,
-        raidMaterial: decision?.raidMaterial,
-        blockTarget: decision?.blockTarget
-      });
-      
       if (decision && decision.raidTarget && decision.raidTarget !== 'none') {
-        console.log(`🔍 Combat Debug - ${player.name} attempting raid on ${decision.raidTarget}`);
+        console.log(`🔍 ${player.name} ($${pdata.credits}) attempting raid on ${decision.raidTarget}`);
         
         // Find target player
         const targetPlayer = players.find(p => p.name === decision.raidTarget);
         if (targetPlayer && targetPlayer.id !== player.id) {
           const targetData = playerData[targetPlayer.id];
           
-          console.log(`🔍 Combat Debug - Target ${targetPlayer.name} data:`, {
-            stockpiles: targetData.stockpiles,
-            blockTarget: targetData.blockTarget
-          });
+          console.log(`🔍 Target ${targetPlayer.name} has:`, targetData.stockpiles);
           
-          // Check if raid is blocked
-          const isBlocked = targetData.blockTarget === player.name;
-          console.log(`🔍 Combat Debug - Raid blocked? ${isBlocked} (${targetData.blockTarget} === ${player.name})`);
-          
-          if (isBlocked) {
-            // Raid blocked
-            news.push(`🛡️ ${player.name}'s raid on ${targetPlayer.name} was blocked!`);
-            console.log(`🛡️ ${player.name}'s raid on ${targetPlayer.name} was blocked by ${targetPlayer.name}`);
-          } else {
-            // Raid successful - steal 2 units of specified resource
-            const raidResource = decision.raidMaterial;
-            if (raidResource && raidResource !== 'none' && targetData.stockpiles[raidResource] >= 2) {
-              // Transfer resources
+          // Check if raid is possible (target has resource and raider has green poison)
+          const raidResource = decision.raidMaterial;
+          if (raidResource && raidResource !== 'none' && targetData.stockpiles[raidResource] >= 2) {
+            if (pdata.stockpiles.greenPoison >= 2) {
+              // Successful raid - steal 2 units
               targetData.stockpiles[raidResource] -= 2;
               pdata.stockpiles[raidResource] += 2;
+              pdata.stockpiles.greenPoison -= 2; // Cost 2 green poison
               
-              // Add to protected resources (can't be raided until next day)
-              pdata.protectedResources = pdata.protectedResources || {};
-              pdata.protectedResources[raidResource] = (pdata.protectedResources[raidResource] || 0) + 2;
-              
-              // Deduct raid cost (2 green poison)
-              if (pdata.stockpiles.greenPoison >= 2) {
-                pdata.stockpiles.greenPoison -= 2;
-                news.push(`🚀 ${player.name} successfully raided ${targetPlayer.name} and stole 2 ${getResourceIcon(raidResource)} ${raidResource}!`);
-                console.log(`🚀 ${player.name} raided ${targetPlayer.name}: stole 2 ${raidResource}, cost 2🌱`);
-              } else {
-                // Not enough green poison for raid
-                news.push(`❌ ${player.name} attempted to raid ${targetPlayer.name} but didn't have enough green poison!`);
-                console.log(`❌ ${player.name} raid failed: insufficient green poison`);
-              }
+              news.push(`🚀 ${player.name} successfully raided ${targetPlayer.name} and stole 2 ${getResourceIcon(raidResource)} ${raidResource}!`);
+              console.log(`🚀 ${player.name} raided ${targetPlayer.name}: stole 2 ${raidResource}, cost 2🌱`);
             } else {
-              news.push(`❌ ${player.name}'s raid on ${targetPlayer.name} failed - target resource not available!`);
-              console.log(`❌ ${player.name} raid failed: target resource ${raidResource} not available`);
+              // Not enough green poison for raid
+              news.push(`❌ ${player.name} attempted to raid ${targetPlayer.name} but didn't have enough green poison!`);
+              console.log(`❌ ${player.name} raid failed: insufficient green poison`);
             }
+          } else {
+            news.push(`❌ ${player.name}'s raid on ${targetPlayer.name} failed - target resource not available!`);
+            console.log(`❌ ${player.name} raid failed: target resource ${raidResource} not available`);
           }
         } else {
-          console.log(`🔍 Combat Debug - Invalid target for ${player.name}:`, decision.raidTarget);
+          console.log(`🔍 Invalid target for ${player.name}:`, decision.raidTarget);
         }
       }
     });
     
-    // STEP 5: MARKET PRICE CALCULATION
+    // STEP 4: MARKET PRICE CALCULATION
     const currentPrices = { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
     const currentColonyNeeds = getCurrentColonyNeeds(currentDay);
     const newPrices = calculateSellingBasedPrices(dailySalesTotals, currentColonyNeeds, currentPrices);
     const tomorrowColonyNeeds = getCurrentColonyNeeds(currentDay + 1);
     
-    // STEP 6: UPDATE PRICE HISTORY
+    // STEP 5: UPDATE PRICE HISTORY
     // Get existing price history and append new day
     const existingPriceHistory = JSON.parse(gameState.price_history || '[]');
     const priceHistory = [...existingPriceHistory, { day: currentDay, ...newPrices }];
@@ -1160,7 +1149,7 @@ app.post('/force-clear-decisions/:day', (req, res) => {
 
 // Submit decisions endpoint
 app.post('/submit-decisions', (req, res) => {
-  const { playerId, day, efforts, sales, raidTarget, raidMaterial, blockTarget, dumpResource, dumpAmount } = req.body;
+  const { playerId, day, efforts, sales, raidTarget, raidMaterial, dumpResource, dumpAmount } = req.body;
   
   if (!playerId || !day) {
     return res.json({ error: 'Missing required fields' });
@@ -1190,7 +1179,7 @@ app.post('/submit-decisions', (req, res) => {
     
     // Insert new decision
     db.run(
-      'INSERT INTO decisions (playerId, day, efforts, sales, raidTarget, raidMaterial, blockTarget, dumpResource, dumpAmount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO decisions (playerId, day, efforts, sales, raidTarget, raidMaterial, dumpResource, dumpAmount) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
       [
         playerId,
         day,
@@ -1198,7 +1187,6 @@ app.post('/submit-decisions', (req, res) => {
         JSON.stringify(sales || {}),
         raidTarget || 'none',
         raidMaterial || 'none',
-        blockTarget || 'none',
         dumpResource || 'none',
         dumpAmount || 0
       ],
@@ -1364,9 +1352,7 @@ app.get('/players-status', (req, res) => {
             if (decision.raidTarget && decision.raidTarget !== 'none') {
               details += `, 🚀 raiding ${decision.raidTarget}`;
             }
-            if (decision.blockTarget && decision.blockTarget !== 'none') {
-              details += `, 🛡️ blocking ${decision.blockTarget}`;
-            }
+            // Blocking system removed - no longer needed
           }
 
           return {
