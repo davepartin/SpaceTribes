@@ -2060,8 +2060,9 @@
             <li>💰 <strong>Dump First:</strong> You can dump resources BEFORE being raided to protect them</li>
             <li>🎯 <strong>No Protection:</strong> Anyone can raid anyone, but timing matters!</li>
             <li>📊 <strong>Strategy:</strong> Dump valuable resources before higher-credit players raid you</li>
+            <li>🤫 <strong>Ranking:</strong> You only know if you're in TOP 3, MIDDLE, or BOTTOM 3</li>
           </ul>
-          <p><em>Your current rank: <span id="playerRank">Loading...</span></em></p>
+          <p><em>Your current tier: <span id="playerRank">Loading...</span></em></p>
         </div>
 
         <!-- Submit Decisions Button (Replace the current submit button area) -->
@@ -2986,11 +2987,11 @@
                 const totalPlayers = sortedPlayers.length;
                 
                 if (rank <= 3) {
-                  playerRankElement.innerHTML = `<span style="color: #ffd700;">🏆 TOP ${rank} ($${sortedPlayers[playerIndex].credits || 0})</span>`;
-                } else if (rank === totalPlayers) {
-                  playerRankElement.innerHTML = `<span style="color: #ff6b6b;">🥉 LAST PLACE ($${sortedPlayers[playerIndex].credits || 0})</span>`;
+                  playerRankElement.innerHTML = `<span style="color: #ffd700;">🏆 TOP 3 ($${sortedPlayers[playerIndex].credits || 0})</span>`;
+                } else if (rank > totalPlayers - 3) {
+                  playerRankElement.innerHTML = `<span style="color: #ff6b6b;">🥉 BOTTOM 3 ($${sortedPlayers[playerIndex].credits || 0})</span>`;
                 } else {
-                  playerRankElement.innerHTML = `<span style="color: #87ceeb;">📊 #${rank} of ${totalPlayers} ($${sortedPlayers[playerIndex].credits || 0})</span>`;
+                  playerRankElement.innerHTML = `<span style="color: #87ceeb;">📊 MIDDLE ($${sortedPlayers[playerIndex].credits || 0})</span>`;
                 }
               } else {
                 playerRankElement.innerHTML = 'Unknown';
