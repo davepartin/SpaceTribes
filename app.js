@@ -585,6 +585,17 @@ db.serialize(() => {
     )
   `);
 
+  // Chat system table
+  db.run(`
+    CREATE TABLE IF NOT EXISTS chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      player_name TEXT NOT NULL,
+      message TEXT NOT NULL,
+      timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      day INTEGER NOT NULL
+    )
+  `);
+
   // Initialize game state if not exists
   db.run(`INSERT OR IGNORE INTO game_state (
     id, 
@@ -1903,6 +1914,15 @@ app.post('/reset-game', (req, res) => {
       }
     });
     
+    db.run('DELETE FROM chat_messages', (err) => {
+      if (err) {
+        console.error('Error clearing chat in /reset-game:', {
+          error: err.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+    
     // Reset game state to Day 1 with correct starting colony needs
     db.run(`UPDATE game_state SET 
       current_day = 1,
@@ -1943,6 +1963,85 @@ app.post('/reset-game', (req, res) => {
     });
   });
 });
+
+// Chat system endpoints
+app.post('/chat/send', (req, res) => {
+  const { playerName, message, day } = req.body;
+  
+  if (!playerName || !message || !day) {
+    return res.json({ error: 'Missing required fields' });
+  }
+  
+  if (message.length > 160) {
+    return res.json({ error: 'Message too long (max 160 characters)' });
+  }
+  
+  if (message.trim().length === 0) {
+    return res.json({ error: 'Message cannot be empty' });
+  }
+  
+  db.run(
+    'INSERT INTO chat_messages (player_name, message, day) VALUES (?, ?, ?)',
+    [playerName, message.trim(), day],
+    function(err) {
+      if (err) {
+        console.error('Error saving chat message:', err);
+        return res.json({ error: 'Failed to save message' });
+      }
+      
+      console.log(`💬 ${playerName}: ${message}`);
+      res.json({ success: true, messageId: this.lastID });
+    }
+  );
+});
+
+app.get('/chat/messages', (req, res) => {
+  const { limit = 50, day } = req.query;
+  
+  let query = 'SELECT * FROM chat_messages';
+  let params = [];
+  
+  if (day) {
+    query += ' WHERE day = ?';
+    params.push(day);
+  }
+  
+  query += ' ORDER BY timestamp DESC LIMIT ?';
+  params.push(parseInt(limit));
+  
+  db.all(query, params, (err, messages) => {
+    if (err) {
+      console.error('Error fetching chat messages:', err);
+      return res.json({ error: 'Failed to fetch messages' });
+    }
+    
+    // Format messages for frontend
+    const formattedMessages = messages.map(msg => ({
+      id: msg.id,
+      playerName: msg.player_name,
+      message: msg.message,
+      timestamp: msg.timestamp,
+      day: msg.day,
+      timeAgo: getTimeAgo(new Date(msg.timestamp))
+    }));
+    
+    res.json({ messages: formattedMessages.reverse() }); // Show oldest first
+  });
+});
+
+// Helper function for time formatting
+function getTimeAgo(date) {
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+  
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
