@@ -291,6 +291,59 @@ function processCoreDayLogic(currentDay, players, decisions, gameState, callback
   }
 }
 
+// Save news to database
+function saveNewsToDatabase(newsArray, currentDay, callback) {
+  if (!newsArray || newsArray.length === 0) {
+    return callback(null); // No news to save
+  }
+  
+  let completed = 0;
+  let hasError = false;
+  
+  newsArray.forEach(newsItem => {
+    // Determine category and priority based on news content
+    let category = 'general';
+    let priority = 1;
+    
+    if (newsItem.includes('⚔️') || newsItem.includes('raided') || newsItem.includes('stole')) {
+      category = 'raid';
+      priority = 3;
+    } else if (newsItem.includes('🛡️') || newsItem.includes('blocked')) {
+      category = 'block';
+      priority = 3;
+    } else if (newsItem.includes('💰') || newsItem.includes('sold')) {
+      category = 'market';
+      priority = 2;
+    } else if (newsItem.includes('⛏️') || newsItem.includes('mined')) {
+      category = 'mining';
+      priority = 1;
+    }
+    
+    db.run(
+      'INSERT INTO news (day, message, category, priority) VALUES (?, ?, ?, ?)',
+      [currentDay, newsItem, category, priority],
+      function(err) {
+        if (err) {
+          console.error('Error saving news item:', {
+            error: err.message,
+            newsItem,
+            currentDay,
+            timestamp: new Date().toISOString()
+          });
+          hasError = true;
+        } else {
+          console.log(`📰 Saved news: ${newsItem}`);
+        }
+        
+        completed++;
+        if (completed === newsArray.length) {
+          callback(hasError ? new Error('Some news items failed to save') : null);
+        }
+      }
+    );
+  });
+}
+
 // Update player data in database after day processing
 function updatePlayerDataAfterDayProcessing(players, result, currentDay, callback) {
   const { playerData, totalSupply, dailySalesTotals, news } = result;
@@ -995,22 +1048,34 @@ app.post('/process-day', (req, res) => {
                     return res.json({ error: 'Failed to update player data' });
                   }
                   
-                  // Clear today's decisions
-                  db.run('DELETE FROM decisions WHERE day = ?', [currentDay], (err) => {
+                  // Save news to database
+                  saveNewsToDatabase(result.news, currentDay, (err) => {
                     if (err) {
-                      console.error('Error clearing decisions in /process-day:', {
+                      console.error('Error saving news in /process-day:', {
                         error: err.message,
                         currentDay,
                         timestamp: new Date().toISOString()
                       });
+                      // Continue processing even if news saving fails
                     }
                     
-                    console.log('✅ Day processed successfully!');
-                    res.json({ 
-                      success: true, 
-                      message: 'Day processed successfully!',
-                      gameEnded: false,
-                      newDay: newDay
+                    // Clear today's decisions
+                    db.run('DELETE FROM decisions WHERE day = ?', [currentDay], (err) => {
+                      if (err) {
+                        console.error('Error clearing decisions in /process-day:', {
+                          error: err.message,
+                          currentDay,
+                          timestamp: new Date().toISOString()
+                        });
+                      }
+                      
+                      console.log('✅ Day processed successfully!');
+                      res.json({ 
+                        success: true, 
+                        message: 'Day processed successfully!',
+                        gameEnded: false,
+                        newDay: newDay
+                      });
                     });
                   });
                 });
