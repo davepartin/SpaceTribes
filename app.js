@@ -225,15 +225,15 @@ function processCoreDayLogic(currentDay, players, decisions, gameState, callback
           
           // Check if raid is possible (target has resource and raider has green poison)
           const raidResource = decision.raidMaterial;
-          if (raidResource && raidResource !== 'none' && targetData.stockpiles[raidResource] >= 2) {
+          if (raidResource && raidResource !== 'none' && targetData.stockpiles[raidResource] >= 3) {
             if (pdata.stockpiles.greenPoison >= 2) {
-              // Successful raid - steal 2 units
-              targetData.stockpiles[raidResource] -= 2;
-              pdata.stockpiles[raidResource] += 2;
+              // Successful raid - steal 3 units
+              targetData.stockpiles[raidResource] -= 3;
+              pdata.stockpiles[raidResource] += 3;
               pdata.stockpiles.greenPoison -= 2; // Cost 2 green poison
               
-              news.push(`🚀 ${player.name} successfully raided ${targetPlayer.name} and stole 2 ${getResourceIcon(raidResource)} ${raidResource}!`);
-              console.log(`🚀 ${player.name} raided ${targetPlayer.name}: stole 2 ${raidResource}, cost 2🌱`);
+              news.push(`🚀 ${player.name} successfully raided ${targetPlayer.name} and stole 3 ${getResourceIcon(raidResource)} ${raidResource}!`);
+              console.log(`🚀 ${player.name} raided ${targetPlayer.name}: stole 3 ${raidResource}, cost 2🌱`);
             } else {
               // Not enough green poison for raid
               news.push(`❌ ${player.name} attempted to raid ${targetPlayer.name} but didn't have enough green poison!`);
