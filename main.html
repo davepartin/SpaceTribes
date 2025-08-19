@@ -3498,6 +3498,7 @@
         // Raid News functions
         // Load raid news only
         function loadRaidNews() {
+          console.log('🔍 Loading raid news...');
           fetch('/structured-news/3')
             .then(res => res.json())
             .then(data => {
@@ -3505,6 +3506,8 @@
                 console.error('Failed to load raid news:', data.error);
                 return;
               }
+              console.log('🔍 Raid news data received:', data);
+              console.log('🔍 Structured news:', data.structuredNews);
               displayRaidNews(data.structuredNews);
             })
             .catch(err => {
@@ -3514,20 +3517,29 @@
 
         // Display raid news in a simple format
         function displayRaidNews(newsData) {
+          console.log('🔍 displayRaidNews called with:', newsData);
+          
           const container = document.getElementById('raidNewsContainer');
           if (!container) return;
           
           if (!newsData || newsData.length === 0) {
+            console.log('🔍 No news data, showing "No raid news available"');
             container.innerHTML = '<div class="no-news">No raid news available</div>';
             return;
           }
           
+          console.log('🔍 Processing news data for', newsData.length, 'days');
+          
           container.innerHTML = '';
           
-          newsData.forEach(dayData => {
+          newsData.forEach((dayData, index) => {
+            console.log(`🔍 Day ${index + 1} data:`, dayData);
+            
             // Only show days that have raid or block news
             const raidNews = dayData.raid || [];
             const blockNews = dayData.block || [];
+            
+            console.log(`🔍 Day ${dayData.day}: ${raidNews.length} raids, ${blockNews.length} blocks`);
             
             if (raidNews.length > 0 || blockNews.length > 0) {
               const daySection = document.createElement('div');
@@ -3546,6 +3558,8 @@
                 </div>
               `;
               container.appendChild(daySection);
+            } else {
+              console.log(`🔍 Day ${dayData.day}: No raid/block news to display`);
             }
           });
         }
