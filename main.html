@@ -1771,13 +1771,13 @@
           </div>
         </div>
 
-        <!-- Raid News -->
+        <!-- Daily News -->
         <section class="decision-section">
-          <h2>⚔️ Raid News</h2>
+          <h2>📰 Daily News</h2>
           
-          <!-- Raid News Container -->
+          <!-- News Container -->
           <div id="raidNewsContainer">
-            <div class="loading-status">Loading raid news...</div>
+            <div class="loading-status">Loading news...</div>
           </div>
         </section>
 
@@ -3529,7 +3529,7 @@
             });
         }
 
-        // Display raid news in a simple format
+        // Display all news in a simple format
         function displayRaidNews(newsData) {
           console.log('🔍 displayRaidNews called with:', newsData);
           
@@ -3537,8 +3537,8 @@
           if (!container) return;
           
           if (!newsData || newsData.length === 0) {
-            console.log('🔍 No news data, showing "No raid news available"');
-            container.innerHTML = '<div class="no-news">No raid news available</div>';
+            console.log('🔍 No news data, showing "No news available"');
+            container.innerHTML = '<div class="no-news">No news available</div>';
             return;
           }
           
@@ -3549,33 +3549,65 @@
           newsData.forEach((dayData, index) => {
             console.log(`🔍 Day ${index + 1} data:`, dayData);
             
-            // Only show days that have raid or block news
-            const raidNews = dayData.raid || [];
-            const blockNews = dayData.block || [];
+            // Show all news categories for each day
+            const allNews = [];
+            Object.keys(dayData).forEach(category => {
+              if (category !== 'day' && Array.isArray(dayData[category])) {
+                dayData[category].forEach(news => {
+                  allNews.push({ ...news, category });
+                });
+              }
+            });
             
-            console.log(`🔍 Day ${dayData.day}: ${raidNews.length} raids, ${blockNews.length} blocks`);
+            console.log(`🔍 Day ${dayData.day}: ${allNews.length} total news items`);
             
-            if (raidNews.length > 0 || blockNews.length > 0) {
+            if (allNews.length > 0) {
               const daySection = document.createElement('div');
               daySection.className = 'news-day-section';
               daySection.innerHTML = `
                 <div class="news-day-header">
                   <div class="day-title">📅 Day ${dayData.day}</div>
                   <div class="day-stats">
-                    <span>⚔️ ${raidNews.length} raids</span>
-                    <span>🛡️ ${blockNews.length} blocks</span>
+                    <span>📰 ${allNews.length} news items</span>
                   </div>
                 </div>
                 <div class="news-day-content">
-                  ${raidNews.map(news => `<div class="news-item raid-news">⚔️ ${news.message}</div>`).join('')}
-                  ${blockNews.map(news => `<div class="news-item block-news">🛡️ ${news.message}</div>`).join('')}
+                  ${allNews.map(news => {
+                    const icon = getNewsIcon(news.category);
+                    const color = getNewsColor(news.category);
+                    return `<div class="news-item" style="color: ${color}">${icon} ${news.message}</div>`;
+                  }).join('')}
                 </div>
               `;
               container.appendChild(daySection);
             } else {
-              console.log(`🔍 Day ${dayData.day}: No raid/block news to display`);
+              console.log(`🔍 Day ${dayData.day}: No news to display`);
             }
           });
+        }
+        
+        // Helper function to get news icon based on category
+        function getNewsIcon(category) {
+          const icons = {
+            raid: '⚔️',
+            block: '🛡️',
+            market: '💰',
+            mining: '⛏️',
+            general: '📰'
+          };
+          return icons[category] || '📰';
+        }
+        
+        // Helper function to get news color based on category
+        function getNewsColor(category) {
+          const colors = {
+            raid: '#ff6666',
+            block: '#66ccff',
+            market: '#ffcc00',
+            mining: '#66cc66',
+            general: '#cccccc'
+          };
+          return colors[category] || '#cccccc';
         }
 
         // Load and display market news

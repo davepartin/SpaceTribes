@@ -1608,6 +1608,21 @@ const NEWS_CATEGORIES = {
     icon: '🛡️',
     color: '#66ccff',
     title: 'Block Operations'
+  },
+  market: {
+    icon: '💰',
+    color: '#ffcc00',
+    title: 'Market Operations'
+  },
+  mining: {
+    icon: '⛏️',
+    color: '#66cc66',
+    title: 'Mining Operations'
+  },
+  general: {
+    icon: '📰',
+    color: '#cccccc',
+    title: 'General News'
   }
 };
 
