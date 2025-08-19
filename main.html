@@ -3510,6 +3510,15 @@
               // Block target reset removed - blocking system no longer used
               updateDiceSection(); // Reset dice display
               
+              // Reset dump section for new day
+              selectedDumpResource = 'none';
+              currentDumpAmount = 1;
+              const dumpResourceSelect = document.getElementById('dumpResource');
+              if (dumpResourceSelect) dumpResourceSelect.value = 'none';
+              const dumpAmountSection = document.getElementById('dumpAmountSection');
+              if (dumpAmountSection) dumpAmountSection.style.display = 'none';
+              updateDumpOptions(); // Refresh dump options
+              
               // Clear submission status for the processed day
               const processedDay = gameData?.gameState?.currentDay || 1;
               const submissionKey = `submitted_day_${processedDay}`;
