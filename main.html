@@ -3450,6 +3450,9 @@
                 showMessage(`UI update error: ${error.message}. Some features may not display correctly.`, 'warning');
               }
               
+              // Reload news to show latest updates
+              loadRaidNews();
+              
               // Check for game end
               if (data.gameStatus && data.gameStatus.isGameEnded && data.gameStatus.winner) { // Use gameStatus.isGameEnded
                 setTimeout(() => showGameEndModal(data.gameStatus), 1000); // Pass gameStatus which contains winner/finalStandings
