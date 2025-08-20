@@ -25,9 +25,22 @@
             padding: 40px;
             box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
             text-align: center;
-            max-width: 450px;
+            max-width: 500px;
             width: 100%;
             animation: fadeIn 1s ease-out;
+            backdrop-filter: blur(10px);
+        }
+        .game-logo {
+            max-width: 400px;
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.3));
+            animation: logoGlow 2s ease-in-out infinite alternate;
+            margin-bottom: 30px;
+        }
+        @keyframes logoGlow {
+            from { filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.3)); }
+            to { filter: drop-shadow(0 0 30px rgba(255, 0, 255, 0.5)); }
         }
         h1 {
             font-family: 'Orbitron', monospace;
@@ -40,6 +53,13 @@
             background-clip: text;
             text-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
         }
+        .welcome-text {
+            font-size: 1.1rem;
+            color: #00ffff;
+            margin-bottom: 30px;
+            line-height: 1.5;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
         .form-group {
             margin-bottom: 20px;
             text-align: left;
@@ -49,6 +69,8 @@
             margin-bottom: 8px;
             font-size: 1rem;
             color: #00ffff;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.3);
         }
         input[type="text"],
         input[type="password"],
@@ -62,13 +84,15 @@
             font-family: 'Space Mono', monospace;
             font-size: 1rem;
             box-sizing: border-box;
+            transition: all 0.3s ease;
         }
         input[type="text"]:focus,
         input[type="password"]:focus,
         select:focus {
             outline: none;
             border-color: #ff00ff;
-            box-shadow: 0 0 10px rgba(255, 0, 255, 0.5);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.5);
+            background-color: rgba(255, 255, 255, 0.15);
         }
         button {
             width: 100%;
@@ -83,42 +107,60 @@
             cursor: pointer;
             transition: all 0.3s ease;
             margin-top: 10px;
+            text-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
         }
         button:hover {
             background: linear-gradient(135deg, #00cc00, #00ff00);
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+            box-shadow: 0 5px 20px rgba(0, 255, 0, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
         }
         .message {
             margin-top: 20px;
-            padding: 10px;
+            padding: 15px;
             border-radius: 8px;
             font-size: 0.9rem;
             font-weight: bold;
-            display: none; /* Hidden by default */
+            display: none;
+            animation: messageSlideIn 0.3s ease-out;
         }
         .message.error {
             background: rgba(255, 0, 0, 0.1);
-            border: 1px solid #ff0000;
+            border: 1px solid rgba(255, 0, 0, 0.3);
             color: #ff6666;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
         }
         .message.success {
             background: rgba(0, 255, 0, 0.1);
-            border: 1px solid #00ff00;
+            border: 1px solid rgba(0, 255, 0, 0.3);
             color: #00ff00;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.2);
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        @keyframes messageSlideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
 
         /* Responsive adjustments */
         @media (max-width: 480px) {
+            .login-container {
+                padding: 25px;
+                max-width: 95%;
+            }
+            .game-logo {
+                max-width: 280px;
+            }
             h1 {
                 font-size: 2rem;
             }
-            .login-container {
-                padding: 25px;
+            .welcome-text {
+                font-size: 1rem;
             }
             label, input, select, button {
                 font-size: 0.9rem;
@@ -128,7 +170,8 @@
 </head>
 <body>
     <div class="login-container">
-        <h1>Space Tribes</h1>
+        <img src="spacetribeslogo2.png" alt="Space Tribes" class="game-logo">
+        <p class="welcome-text">Welcome, Commander! Enter your credentials to access the galactic conquest interface.</p>
         <form id="loginForm">
             <div class="form-group">
                 <label for="commanderName">Commander Name:</label>
@@ -146,7 +189,7 @@
                 <label for="pin">PIN (create or enter existing):</label>
                 <input type="password" id="pin" name="pin" required placeholder="Enter 4+ digit PIN">
             </div>
-            <button type="submit">Enter Command Center</button>
+            <button type="submit">🚀 Enter Command Center</button>
         </form>
         <div id="message" class="message"></div>
     </div>

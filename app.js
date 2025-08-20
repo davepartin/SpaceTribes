@@ -35,18 +35,19 @@ function getResourceIcon(resource) {
 
 // Add this function in app.js after helper functions
 function generateColonyNeeds() {
-  // 10-day cycle that balances to 150 total per resource over 10 days
+  // 10-day cycle with dramatic swings while maintaining 15 average per resource
+  // Total per resource over 10 days: 150 (15 average)
   const colonyNeeds = [
-    {day: 1, whiteDiamonds: 18, redRubies: 12, blueGems: 15, greenPoison: 15}, // 60 total
-    {day: 2, whiteDiamonds: 12, redRubies: 18, blueGems: 15, greenPoison: 15}, // 60 total  
-    {day: 3, whiteDiamonds: 15, redRubies: 15, blueGems: 18, greenPoison: 12}, // 60 total
-    {day: 4, whiteDiamonds: 15, redRubies: 15, blueGems: 12, greenPoison: 18}, // 60 total
-    {day: 5, whiteDiamonds: 16, redRubies: 14, blueGems: 16, greenPoison: 14}, // 60 total
-    {day: 6, whiteDiamonds: 14, redRubies: 16, blueGems: 14, greenPoison: 16}, // 60 total
-    {day: 7, whiteDiamonds: 17, redRubies: 13, blueGems: 17, greenPoison: 13}, // 60 total
-    {day: 8, whiteDiamonds: 13, redRubies: 17, blueGems: 13, greenPoison: 17}, // 60 total
-    {day: 9, whiteDiamonds: 15, redRubies: 15, blueGems: 15, greenPoison: 15}, // 60 total
-    {day: 10, whiteDiamonds: 15, redRubies: 15, blueGems: 15, greenPoison: 15} // 60 total
+    {day: 1, whiteDiamonds: 15, redRubies: 15, blueGems: 15, greenPoison: 15}, // 60 total - Balanced start
+    {day: 2, whiteDiamonds: 25, redRubies: 5, blueGems: 15, greenPoison: 15}, // 60 total - Extreme diamond demand
+    {day: 3, whiteDiamonds: 5, redRubies: 25, blueGems: 15, greenPoison: 15}, // 60 total - Extreme ruby demand
+    {day: 4, whiteDiamonds: 15, redRubies: 15, blueGems: 25, greenPoison: 5}, // 60 total - Extreme gem demand
+    {day: 5, whiteDiamonds: 15, redRubies: 15, blueGems: 5, greenPoison: 25}, // 60 total - Extreme poison demand
+    {day: 6, whiteDiamonds: 20, redRubies: 10, blueGems: 20, greenPoison: 10}, // 60 total - High diamond/gem demand
+    {day: 7, whiteDiamonds: 10, redRubies: 20, blueGems: 10, greenPoison: 20}, // 60 total - High ruby/poison demand
+    {day: 8, whiteDiamonds: 8, redRubies: 22, blueGems: 8, greenPoison: 22}, // 60 total - Very high ruby/poison demand
+    {day: 9, whiteDiamonds: 22, redRubies: 8, blueGems: 22, greenPoison: 8}, // 60 total - Very high diamond/gem demand
+    {day: 10, whiteDiamonds: 15, redRubies: 15, blueGems: 15, greenPoison: 15} // 60 total - Balanced finale
   ];
   return colonyNeeds;
 }
@@ -139,7 +140,7 @@ function processCoreDayLogic(currentDay, players, decisions, gameState, callback
       }
     });
     
-    // STEP 2: SALES - Process resource sales
+    // STEP 2: COLLECT SALES DATA (prices calculated later) - NOW AFTER MINING
     const dailySalesTotals = { whiteDiamonds: 0, redRubies: 0, blueGems: 0, greenPoison: 0 };
     
     players.forEach(player => {
@@ -148,22 +149,18 @@ function processCoreDayLogic(currentDay, players, decisions, gameState, callback
       
       if (decision && decision.sales) {
         Object.keys(decision.sales).forEach(resource => {
-          const sellAmount = Math.min(decision.sales[resource] || 0, pdata.stockpiles[resource] || 0);
-          if (sellAmount > 0) {
-            // Get current market price for this resource
-            const currentPrice = 20; // Default price, will be updated by market calculation
-            const earnings = sellAmount * currentPrice;
-            
-            pdata.credits += earnings;
-            pdata.stockpiles[resource] -= sellAmount;
-            pdata.last_night_earnings += earnings;
-            dailySalesTotals[resource] += sellAmount;
-            
-            news.push(`💰 ${player.name} sold ${sellAmount} ${getResourceIcon(resource)} for $${earnings}`);
+          const actualSellAmount = Math.min(decision.sales[resource] || 0, pdata.stockpiles[resource] || 0);
+          if (actualSellAmount > 0) {
+            // Collect sales data for market calculation (prices calculated later)
+            // Use ACTUAL sales amount, limited by current stockpiles
+            dailySalesTotals[resource] += actualSellAmount;
+            console.log(`💰 ${player.name} wants to sell ${decision.sales[resource]} ${resource} (has ${pdata.stockpiles[resource]} in stockpile, can actually sell ${actualSellAmount})`);
           }
         });
       }
     });
+    
+    console.log('📊 Daily sales totals collected:', dailySalesTotals);
     
     // STEP 2.5: DUMP PROCESSING - Process emergency dumps BEFORE raiding
     console.log('💰 Dump phase - processing emergency dumps...');
@@ -250,15 +247,56 @@ function processCoreDayLogic(currentDay, players, decisions, gameState, callback
     });
     
     // STEP 4: MARKET PRICE CALCULATION
-    const currentPrices = { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
+    // Use previous day's prices or base prices if first day
+    let currentPrices;
+    if (currentDay === 1) {
+      // First day starts with base prices
+      currentPrices = { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
+    } else {
+      // Use previous day's prices from price history
+      const existingPriceHistory = JSON.parse(gameState.price_history || '[]');
+      const previousDayPrices = existingPriceHistory.find(p => p.day === currentDay - 1);
+      currentPrices = previousDayPrices || { whiteDiamonds: 20, redRubies: 15, blueGems: 12, greenPoison: 10 };
+    }
     const currentColonyNeeds = getCurrentColonyNeeds(currentDay);
+    
+    console.log('📊 Market calculation inputs:');
+    console.log('  - Daily sales totals:', dailySalesTotals);
+    console.log('  - Colony needs:', currentColonyNeeds);
+    console.log('  - Base prices:', currentPrices);
+    
     const newPrices = calculateSellingBasedPrices(dailySalesTotals, currentColonyNeeds, currentPrices);
     const tomorrowColonyNeeds = getCurrentColonyNeeds(currentDay + 1);
     
+    // STEP 4.5: PROCESS SALES WITH ACTUAL MARKET PRICES
+    players.forEach(player => {
+      const pdata = playerData[player.id];
+      const decision = decisionMap[player.id];
+      
+      if (decision && decision.sales) {
+        Object.keys(decision.sales).forEach(resource => {
+          const sellAmount = Math.min(decision.sales[resource] || 0, pdata.stockpiles[resource] || 0);
+          if (sellAmount > 0) {
+            // Use the calculated market price for this resource
+            const currentPrice = newPrices[resource] || currentPrices[resource];
+            const earnings = sellAmount * currentPrice;
+            
+            pdata.credits += earnings;
+            pdata.stockpiles[resource] -= sellAmount;
+            pdata.last_night_earnings += earnings;
+            
+            news.push(`💰 ${player.name} sold ${sellAmount} ${getResourceIcon(resource)} for $${earnings}`);
+          }
+        });
+      }
+    });
+    
     // STEP 5: UPDATE PRICE HISTORY
-    // Get existing price history and append new day
+    // Get existing price history and append new day (avoid duplicates)
     const existingPriceHistory = JSON.parse(gameState.price_history || '[]');
-    const priceHistory = [...existingPriceHistory, { day: currentDay, ...newPrices }];
+    // Remove any existing entry for this day to avoid duplicates
+    const filteredHistory = existingPriceHistory.filter(p => p.day !== currentDay);
+    const priceHistory = [...filteredHistory, { day: currentDay, ...newPrices }];
     
     const existingColonyNeedsHistory = JSON.parse(gameState.colony_needs_history || '[]');
     const colonyNeedsHistory = [...existingColonyNeedsHistory, { day: currentDay, ...currentColonyNeeds }];
@@ -406,8 +444,8 @@ function getCurrentColonyNeeds(currentDay) {
 
 // Advanced market price calculation based on supply vs. demand ratios
 function calculateSellingBasedPrices(dailySalesTotals, colonyNeeds, currentPrices) {
-  // Market prices are adjusted daily based on supply (total player sales) vs. demand (colony needs).
-  // This implements the sophisticated pricing algorithm from the game design guide.
+  // NEW SYSTEM: Granular price changes based on supply vs. demand
+  // Each unit under/over demand = +/- 10% price change, max 90%
   const newPrices = {};
   const resources = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'];
   
@@ -415,28 +453,22 @@ function calculateSellingBasedPrices(dailySalesTotals, colonyNeeds, currentPrice
     const totalSold = dailySalesTotals[resource] || 0;
     const colonyDemand = colonyNeeds[resource] || 15;
     
-    // Calculate supply/demand ratio
-    const supplyDemandRatio = totalSold / colonyDemand;
+    // Calculate the difference between supply and demand
+    const difference = colonyDemand - totalSold;
     
-    // Apply price multiplier based on supply/demand ratio
-    let priceMultiplier = 1.0; // Stable prices (80-119%)
-    
-    if (supplyDemandRatio >= 1.5) {
-      // 150%+ supply = 40% price drop
-      priceMultiplier = 0.6;
-    } else if (supplyDemandRatio >= 1.2) {
-      // 120-149% = 20% price drop
-      priceMultiplier = 0.8;
-    } else if (supplyDemandRatio < 0.5) {
-      // <50% = 60% price spike
-      priceMultiplier = 1.6;
-    } else if (supplyDemandRatio < 0.8) {
-      // 50-79% = 30% price increase
-      priceMultiplier = 1.3;
+    // Calculate price change percentage (10% per unit, max 90%)
+    let priceChangePercent = 0;
+    if (difference > 0) {
+      // Underselling: price goes UP
+      priceChangePercent = Math.min(difference * 10, 90);
+    } else if (difference < 0) {
+      // Overselling: price goes DOWN
+      priceChangePercent = Math.max(difference * 10, -90);
     }
     
-    // Calculate new price with multiplier
+    // Calculate new price with percentage change
     const basePrice = currentPrices[resource] || 20;
+    const priceMultiplier = 1 + (priceChangePercent / 100);
     let newPrice = Math.round(basePrice * priceMultiplier);
     
     // Clamp prices between $5-$50 as per game design
@@ -445,7 +477,9 @@ function calculateSellingBasedPrices(dailySalesTotals, colonyNeeds, currentPrice
     newPrices[resource] = newPrice;
     
     // Log price changes for transparency
-    console.log(`💰 ${resource}: ${totalSold} sold vs ${colonyDemand} demand (${(supplyDemandRatio * 100).toFixed(0)}%) - Price: $${basePrice} → $${newPrice} (${priceMultiplier > 1 ? '+' : ''}${((priceMultiplier - 1) * 100).toFixed(0)}%)`);
+    const changeSymbol = priceChangePercent > 0 ? '+' : '';
+    const changeText = priceChangePercent === 0 ? '0%' : `${changeSymbol}${priceChangePercent.toFixed(0)}%`;
+    console.log(`💰 ${resource}: ${totalSold} sold vs ${colonyDemand} demand (${difference > 0 ? difference + ' under' : difference < 0 ? Math.abs(difference) + ' over' : 'exact'}) - Price: $${basePrice} → $${newPrice} (${changeText})`);
   });
   
   return newPrices;
@@ -1347,11 +1381,19 @@ app.get('/players-status', (req, res) => {
           const hasSubmitted = decisionMap[player.id] ? true : false;
           const decision = decisionMap[player.id];
           
-          let status = '🟡 Waiting';
-          let details = 'No decisions submitted';
+          // Check if player has ever logged in (has a PIN)
+          const hasLoggedIn = player.pin && player.pin !== '';
           
-          if (hasSubmitted) {
-            status = '✅ Active';
+          let status, details, statusClass;
+          
+          if (!hasLoggedIn) {
+            // Player has never logged in
+            status = '🔴 Not Logged In';
+            details = 'Has not created PIN yet';
+            statusClass = 'not-logged-in';
+          } else if (hasSubmitted) {
+            // Player has submitted decisions
+            status = '🟢 Submitted';
             const efforts = decision.efforts ? JSON.parse(decision.efforts) : {};
             const sales = decision.sales ? JSON.parse(decision.sales) : {};
             
@@ -1359,11 +1401,12 @@ app.get('/players-status', (req, res) => {
             const totalSales = Object.values(sales).reduce((sum, val) => sum + (val || 0), 0);
             
             details = `${totalEffort} robots, ${totalSales} sales`;
-            
-            if (decision.raidTarget && decision.raidTarget !== 'none') {
-              details += `, 🚀 raiding ${decision.raidTarget}`;
-            }
-            // Blocking system removed - no longer needed
+            statusClass = 'submitted';
+          } else {
+            // Player is logged in but hasn't submitted
+            status = '🟡 Waiting';
+            details = 'No decisions submitted';
+            statusClass = 'waiting';
           }
 
           return {
@@ -1375,6 +1418,8 @@ app.get('/players-status', (req, res) => {
             status: status,
             details: details,
             hasSubmitted: hasSubmitted,
+            hasLoggedIn: hasLoggedIn,
+            statusClass: statusClass,
             lastActive: player.last_active || 'Never'
           };
         });
@@ -1927,11 +1972,11 @@ app.post('/reset-game', (req, res) => {
     db.run(`UPDATE game_state SET 
       current_day = 1,
       market_prices = '{"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}',
-      colony_needs = '{"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}',
+              colony_needs = '{"whiteDiamonds":15,"redRubies":15,"blueGems":15,"greenPoison":15}',
       last_supply = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       daily_sales_totals = '{"whiteDiamonds":0,"redRubies":0,"blueGems":0,"greenPoison":0}',
       price_history = '[{"day":1,"whiteDiamonds":20,"redRubies":15,"blueGems":12,"greenPoison":10}]',
-      colony_needs_history = '[{"day":1,"whiteDiamonds":18,"redRubies":12,"blueGems":15,"greenPoison":15}]',
+              colony_needs_history = '[{"day":1,"whiteDiamonds":15,"redRubies":15,"blueGems":15,"greenPoison":15}]',
       active_players = 0,
       last_updated = CURRENT_TIMESTAMP
       WHERE id = 1`, (err) => {

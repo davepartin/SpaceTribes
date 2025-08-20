@@ -667,7 +667,7 @@
       box-shadow: 0 4px 15px rgba(0, 255, 255, 0.1);
     }
 
-    .player-status-card.active {
+    .player-status-card.submitted {
       border-color: #00ff00;
       background: rgba(0, 255, 0, 0.05);
     }
@@ -677,9 +677,9 @@
       background: rgba(255, 255, 0, 0.05);
     }
 
-    .player-status-card.inactive {
-      border-color: #666666;
-      background: rgba(102, 102, 102, 0.05);
+    .player-status-card.not-logged-in {
+      border-color: #ff6666;
+      background: rgba(255, 102, 102, 0.05);
     }
 
     .player-name {
@@ -698,7 +698,7 @@
       min-width: 80px;
     }
 
-    .player-status.active {
+    .player-status.submitted {
       background: rgba(0, 255, 0, 0.2);
       color: #00ff00;
       border: 1px solid #00ff00;
@@ -710,10 +710,10 @@
       border: 1px solid #ffff00;
     }
 
-    .player-status.inactive {
-      background: rgba(102, 102, 102, 0.2);
-      color: #999999;
-      border: 1px solid #666666;
+    .player-status.not-logged-in {
+      background: rgba(255, 102, 102, 0.2);
+      color: #ff6666;
+      border: 1px solid #ff6666;
     }
 
 
@@ -1903,7 +1903,7 @@
         <!-- Player Status Dashboard -->
         <div class="decision-section">
           <h2>Dashboard</h2>
-          <p>Real-time status of all 6 players. Green = Active, Yellow = Waiting, Red = Inactive</p>
+          <p>Real-time status of all 6 players. 🔴 Red = Not Logged In, 🟡 Yellow = Waiting, 🟢 Green = Submitted</p>
           
 
           
@@ -1996,7 +1996,7 @@
 
         <div class="decision-section">
             <h2>📊 Market News</h2>
-            <p>Prior sell prices</p>
+            <p>Prior sell prices with market adjustments</p>
             <div id="marketNewsContainer">
               <div class="loading-status">Loading market news...</div>
             </div>
@@ -2007,7 +2007,7 @@
         <!-- Selling Decisions (FIRST - MORNING) -->
     <div class="decision-section">
           <h2>💰 Sell Resources - Day <span id="sellDayNumber">?</span> Morning</h2>
-          <p>Base prices ($20💎, $15🔻, $12🔷, $10🌱) show relative resource values. Actual selling prices determined by total market sales vs colony demand.</p>
+          <p>Base prices ($20💎, $15🔻, $12🔷, $10🌱) show relative resource values. <strong>NEW:</strong> Prices change by ±10% per unit under/over colony demand, max ±90%. Underselling raises prices, overselling lowers them!</p>
       
       <div class="material-row">
         <div class="material-info">
@@ -3135,20 +3135,13 @@
 
           data.players.forEach(player => {
             console.log(`🔍 Player ${player.name}:`, player);
-            console.log(`🔍 hasSubmitted: ${player.hasSubmitted}`);
+            console.log(`🔍 hasSubmitted: ${player.hasSubmitted}, hasLoggedIn: ${player.hasLoggedIn}`);
             
             const card = document.createElement('div');
             
-            // Determine status class and text based on submission and activity
-            let statusClass, statusText;
-            if (player.hasSubmitted) {
-              statusClass = 'active';
-              statusText = 'Done';
-            } else {
-              // Player is logged in but hasn't submitted decisions yet
-              statusClass = 'waiting';
-              statusText = 'Not Submitted';
-            }
+            // Use the statusClass from backend
+            const statusClass = player.statusClass || 'waiting';
+            const statusText = player.status || 'Unknown';
             
             card.className = `player-status-card ${statusClass}`;
             
