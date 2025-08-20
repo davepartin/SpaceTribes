@@ -1878,6 +1878,111 @@
             min-height: 300px; /* Minimum height for usability */
           }
         }
+
+        /* Personal Summary Styles */
+        .personal-summary-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+          gap: 15px;
+          margin: 20px 0;
+        }
+
+        .resource-summary-card {
+          background: rgba(0, 255, 255, 0.1);
+          border: 1px solid rgba(0, 255, 255, 0.3);
+          border-radius: 8px;
+          padding: 15px;
+          text-align: center;
+          transition: all 0.3s ease;
+        }
+
+        .resource-summary-card:hover {
+          background: rgba(0, 255, 255, 0.2);
+          transform: translateY(-2px);
+        }
+
+        .resource-icon {
+          font-size: 2rem;
+          margin-bottom: 8px;
+          display: block;
+        }
+
+        .resource-amount {
+          font-size: 1.2rem;
+          font-weight: bold;
+          color: #ffff00;
+          margin-bottom: 5px;
+        }
+
+        .resource-price {
+          font-size: 0.9rem;
+          color: #00ff00;
+          margin-bottom: 5px;
+        }
+
+        .resource-earnings {
+          font-size: 1.1rem;
+          font-weight: bold;
+          color: #00ff00;
+        }
+
+        .earnings-summary {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+          gap: 10px;
+          margin-top: 20px;
+          padding: 15px;
+          background: rgba(255, 255, 0, 0.1);
+          border: 1px solid rgba(255, 255, 0, 0.3);
+          border-radius: 8px;
+        }
+
+        .earnings-item {
+          text-align: center;
+        }
+
+        .earnings-label {
+          font-size: 0.9rem;
+          color: #ccc;
+          margin-bottom: 5px;
+        }
+
+        .earnings-value {
+          font-size: 1.2rem;
+          font-weight: bold;
+          color: #00ff00;
+        }
+
+        .total-earnings {
+          font-size: 1.4rem !important;
+          color: #ffff00 !important;
+        }
+
+        .no-summary {
+          text-align: center;
+          color: #888;
+          font-style: italic;
+          padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+          .personal-summary-grid {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+          }
+          
+          .earnings-summary {
+            grid-template-columns: repeat(2, 1fr);
+          }
+          
+          .resource-icon {
+            font-size: 1.5rem;
+          }
+          
+          .resource-amount {
+            font-size: 1rem;
+          }
+        }
   </style>
 </head>
 <body>
@@ -1910,6 +2015,30 @@
           <div class="players-dashboard" id="playersDashboard">
             <!-- Player status buttons will be inserted here by JavaScript -->
             <div class="loading-status">Loading player status...</div>
+          </div>
+        </div>
+
+        <!-- Personal Summary -->
+        <div class="decision-section">
+          <h2 id="personalSummaryTitle">📊 My Day ? Summary</h2>
+          <p>Your decisions and earnings from completed days. Review your performance and plan your strategy.</p>
+          
+          <!-- Current/Recent Day Summary -->
+          <div id="currentSummaryContainer">
+            <div class="loading-status">Loading your summary...</div>
+          </div>
+          
+          <!-- Past Days Dropdown -->
+          <div class="past-days-section" style="margin-top: 20px;">
+            <label for="pastDaysSelect" style="color: #00ff00; font-weight: bold; margin-right: 10px;">View Past Days:</label>
+            <select id="pastDaysSelect" style="background: rgba(0, 0, 0, 0.7); color: #00ff00; border: 1px solid #00ff00; padding: 5px; border-radius: 5px;">
+              <option value="">Select a day...</option>
+            </select>
+          </div>
+          
+          <!-- Past Day Summary Display -->
+          <div id="pastSummaryContainer" style="margin-top: 15px; display: none;">
+            <!-- Past day summary will be displayed here -->
           </div>
         </div>
 
@@ -1999,8 +2128,8 @@
             <p>Prior sell prices with market adjustments</p>
             <div id="marketNewsContainer">
               <div class="loading-status">Loading market news...</div>
-            </div>
           </div>
+    </div>
 
 
 
@@ -2256,7 +2385,7 @@
             <li><strong>⛏️ Mining Phase:</strong> Mining robots work for the next day</li>
           </ol>
           <p><em>Your current tier: <span id="playerRank">Loading...</span></em></p>
-        </div>
+    </div>
 
         <!-- Submit Decisions Button (Replace the current submit button area) -->
     <div class="button-group">
@@ -3146,8 +3275,8 @@
             card.className = `player-status-card ${statusClass}`;
             
             card.innerHTML = `
-              <div class="player-name">${player.name}</div>
-              <div class="player-status ${statusClass}">${statusText}</div>
+                  <div class="player-name">${player.name}</div>
+                <div class="player-status ${statusClass}">${statusText}</div>
             `;
 
             // Add click event to show more details
@@ -3299,10 +3428,10 @@
           
           // Handle auto-advance notifications if game is not ended
           if (!status.isGameEnded) {
-            if (status.canAutoAdvance) {
-              showAutoAdvanceNotification();
-            } else {
-              hideAutoAdvanceNotification();
+                if (status.canAutoAdvance) {
+                  showAutoAdvanceNotification();
+        } else {
+                  hideAutoAdvanceNotification();
             }
           }
         }
@@ -3445,6 +3574,9 @@
               
               // Reload news to show latest updates
               loadRaidNews();
+              
+              // Load personal summary
+              loadPersonalSummary();
               
               // Check for game end
               if (data.gameStatus && data.gameStatus.isGameEnded && data.gameStatus.winner) { // Use gameStatus.isGameEnded
@@ -3771,7 +3903,7 @@
                 </div>
               `;
               container.appendChild(daySection);
-            } else {
+        } else {
               console.log(`🔍 Day ${dayData.day}: No news to display`);
             }
           });
@@ -3825,7 +3957,7 @@
             .then(data => {
               if (data.error) {
                 console.error('Failed to load market news:', data.error);
-                return;
+            return;
               }
               displayMarketNews(data.gameState);
             })
@@ -4121,8 +4253,8 @@
               day: currentChatDay
             })
           })
-          .then(res => res.json())
-          .then(data => {
+            .then(res => res.json())
+            .then(data => {
             if (data.error) {
               alert('Failed to send message: ' + data.error);
               return;
@@ -4132,8 +4264,8 @@
             input.value = '';
             updateCharCount();
             loadChatMessages();
-          })
-          .catch(err => {
+            })
+            .catch(err => {
             console.error('Error sending message:', err);
             alert('Failed to send message. Please try again.');
           })
@@ -4192,6 +4324,161 @@
           }
         }
 
+        // Personal Summary Functions
+        let personalSummaryData = null;
+
+        // Load personal summary data
+        async function loadPersonalSummary() {
+          try {
+            const playerId = localStorage.getItem('playerId');
+            if (!playerId) {
+              document.getElementById('currentSummaryContainer').innerHTML = 
+                '<div class="no-summary">Please log in to view your summary.</div>';
+              return;
+            }
+
+            const response = await fetch(`/personal-summary/${playerId}`);
+            const data = await response.json();
+            
+            if (data.error) {
+              document.getElementById('currentSummaryContainer').innerHTML = 
+                `<div class="no-summary">Error: ${data.error}</div>`;
+              return;
+            }
+
+            personalSummaryData = data;
+            displayCurrentSummary(data);
+            populatePastDaysDropdown(data);
+            
+          } catch (error) {
+            console.error('Error loading personal summary:', error);
+            document.getElementById('currentSummaryContainer').innerHTML = 
+              '<div class="no-summary">Failed to load summary.</div>';
+          }
+        }
+
+        // Display the most recent completed day summary
+        function displayCurrentSummary(data) {
+          const currentDay = data.currentDay;
+          const summaries = data.summaries;
+          const playerName = data.playerName;
+          
+          // Update title
+          const mostRecentDay = summaries.length > 0 ? summaries[0].day : currentDay - 1;
+          document.getElementById('personalSummaryTitle').textContent = 
+            `📊 My Day ${mostRecentDay} Summary`;
+          
+          // Display most recent summary
+          if (summaries.length === 0) {
+            document.getElementById('currentSummaryContainer').innerHTML = 
+              '<div class="no-summary">No completed days yet. Start making decisions to see your summary!</div>';
+            return;
+          }
+          
+          const latestSummary = summaries[0]; // Most recent day
+          displaySummary(latestSummary, 'currentSummaryContainer');
+        }
+
+        // Display a specific day's summary
+        function displaySummary(summary, containerId) {
+          const container = document.getElementById(containerId);
+          
+          const resourceIcons = {
+            whiteDiamonds: '💎',
+            redRubies: '🔻', 
+            blueGems: '🔷',
+            greenPoison: '🌱'
+          };
+          
+          let resourcesHTML = '';
+          Object.keys(summary.resources).forEach(resource => {
+            const data = summary.resources[resource];
+            if (data.sold > 0 || data.earnings > 0) {
+              resourcesHTML += `
+                <div class="resource-summary-card">
+                  <span class="resource-icon">${resourceIcons[resource]}</span>
+                  <div class="resource-amount">${data.sold} sold</div>
+                  <div class="resource-price">@ $${data.price}</div>
+                  <div class="resource-earnings">$${data.earnings}</div>
+                </div>
+              `;
+            }
+          });
+          
+          if (!resourcesHTML) {
+            resourcesHTML = '<div class="no-summary">No resources sold this day.</div>';
+          }
+          
+          const earningsHTML = `
+            <div class="earnings-summary">
+              <div class="earnings-item">
+                <div class="earnings-label">Resources</div>
+                <div class="earnings-value">$${
+                  Object.values(summary.resources).reduce((total, r) => total + r.earnings, 0)
+                }</div>
+              </div>
+              <div class="earnings-item">
+                <div class="earnings-label">Dump</div>
+                <div class="earnings-value">$${summary.dumpEarnings}</div>
+              </div>
+              <div class="earnings-item">
+                <div class="earnings-label">Raids</div>
+                <div class="earnings-value">$${summary.raidEarnings}</div>
+              </div>
+              <div class="earnings-item">
+                <div class="earnings-label">Total</div>
+                <div class="earnings-value total-earnings">$${summary.totalEarnings}</div>
+              </div>
+            </div>
+          `;
+          
+          container.innerHTML = `
+            <div class="personal-summary-grid">
+              ${resourcesHTML}
+            </div>
+            ${earningsHTML}
+          `;
+        }
+
+        // Populate the past days dropdown
+        function populatePastDaysDropdown(data) {
+          const select = document.getElementById('pastDaysSelect');
+          const summaries = data.summaries;
+          
+          // Clear existing options except the first one
+          select.innerHTML = '<option value="">Select a day...</option>';
+          
+          summaries.forEach(summary => {
+            const option = document.createElement('option');
+            option.value = summary.day;
+            option.textContent = `Day ${summary.day} ($${summary.totalEarnings})`;
+            select.appendChild(option);
+          });
+          
+          // Add event listener for dropdown selection
+          select.addEventListener('change', function() {
+            const selectedDay = parseInt(this.value);
+            const pastContainer = document.getElementById('pastSummaryContainer');
+            
+            if (selectedDay) {
+              const selectedSummary = summaries.find(s => s.day === selectedDay);
+              if (selectedSummary) {
+                displaySummary(selectedSummary, 'pastSummaryContainer');
+                pastContainer.style.display = 'block';
+                
+                // Update the past summary title
+                pastContainer.innerHTML = `
+                  <h3 style="color: #00ff00; margin-bottom: 15px;">📊 Day ${selectedDay} Summary</h3>
+                  <div id="pastSummaryContent"></div>
+                `;
+                displaySummary(selectedSummary, 'pastSummaryContent');
+              }
+            } else {
+              pastContainer.style.display = 'none';
+            }
+          });
+        }
+
         // Add event listener for dump resource selection
         document.addEventListener('DOMContentLoaded', function() {
           const dumpResourceSelect = document.getElementById('dumpResource');
@@ -4213,6 +4500,7 @@
           loadRaidNews(); // Load most recent news on DOMContentLoaded
           loadChatMessages(); // Load chat messages
           startChatAutoRefresh(); // Start auto-refresh
+          loadPersonalSummary(); // Load personal summary
           // Market news will be loaded after game data is loaded
         });
 

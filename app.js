@@ -2074,6 +2074,161 @@ app.get('/chat/messages', (req, res) => {
   });
 });
 
+// Personal Summary endpoint - get player's decisions and earnings for all days
+app.get('/personal-summary/:playerId', (req, res) => {
+  const playerId = parseInt(req.params.playerId);
+  
+  if (!playerId || isNaN(playerId)) {
+    return res.status(400).json({ error: 'Invalid player ID' });
+  }
+  
+  // Get current game state to know the current day
+  db.get('SELECT current_day, price_history FROM game_state WHERE id = 1', (err, gameState) => {
+    if (err) {
+      console.error('Error fetching game state in /personal-summary:', {
+        error: err.message,
+        playerId,
+        timestamp: new Date().toISOString()
+      });
+      return res.status(500).json({ error: 'Failed to fetch game state' });
+    }
+    
+    if (!gameState) {
+      return res.status(404).json({ error: 'Game state not found' });
+    }
+    
+    const currentDay = gameState.current_day;
+    const priceHistory = JSON.parse(gameState.price_history || '[]');
+    
+    // Get player's decisions for all days
+    db.all(
+      'SELECT * FROM decisions WHERE playerId = ? ORDER BY day DESC',
+      [playerId],
+      (err, decisions) => {
+        if (err) {
+          console.error('Error fetching decisions in /personal-summary:', {
+            error: err.message,
+            playerId,
+            timestamp: new Date().toISOString()
+          });
+          return res.status(500).json({ error: 'Failed to fetch decisions' });
+        }
+        
+        // Get player's earnings from news for each day
+        db.all(
+          'SELECT day, message FROM news WHERE (message LIKE ? OR message LIKE ?) ORDER BY day DESC',
+          [`%sold%`, `%dumped%`], // Look for sales and dump news
+          (err, salesNews) => {
+            if (err) {
+              console.error('Error fetching sales news in /personal-summary:', {
+                error: err.message,
+                playerId,
+                timestamp: new Date().toISOString()
+              });
+              return res.status(500).json({ error: 'Failed to fetch sales news' });
+            }
+            
+            // Get player name
+            db.get('SELECT name FROM players WHERE id = ?', [playerId], (err, player) => {
+              if (err || !player) {
+                return res.status(404).json({ error: 'Player not found' });
+              }
+              
+              const playerName = player.name;
+              
+              // Process each day's summary
+              const summaries = [];
+              
+              for (let day = 1; day <= currentDay - 1; day++) { // Only completed days
+                const decision = decisions.find(d => d.day === day);
+                const dayPrices = priceHistory.find(p => p.day === day);
+                
+                let summary = {
+                  day: day,
+                  resources: {
+                    whiteDiamonds: { sold: 0, price: 20, earnings: 0 },
+                    redRubies: { sold: 0, price: 15, earnings: 0 },
+                    blueGems: { sold: 0, price: 12, earnings: 0 },
+                    greenPoison: { sold: 0, price: 10, earnings: 0 }
+                  },
+                  dumpEarnings: 0,
+                  raidEarnings: 0, // Raids don't earn money directly, but show raid activity
+                  totalEarnings: 0
+                };
+                
+                if (dayPrices) {
+                  summary.resources.whiteDiamonds.price = dayPrices.whiteDiamonds || 20;
+                  summary.resources.redRubies.price = dayPrices.redRubies || 15;
+                  summary.resources.blueGems.price = dayPrices.blueGems || 12;
+                  summary.resources.greenPoison.price = dayPrices.greenPoison || 10;
+                }
+                
+                // Extract sales from news for this day and player
+                const daySalesNews = salesNews.filter(news => 
+                  news.day === day && news.message.includes(playerName) && news.message.includes('sold')
+                );
+                
+                daySalesNews.forEach(news => {
+                  // Parse news like "💰 Dave sold 3 💎 for $114"
+                  const match = news.message.match(/sold (\d+) [💎🔻🔷🌱] for \$(\d+)/);
+                  if (match) {
+                    const amount = parseInt(match[1]);
+                    const earnings = parseInt(match[2]);
+                    
+                    // Determine resource type from emoji
+                    if (news.message.includes('💎')) {
+                      summary.resources.whiteDiamonds.sold = amount;
+                      summary.resources.whiteDiamonds.earnings = earnings;
+                    } else if (news.message.includes('🔻')) {
+                      summary.resources.redRubies.sold = amount;
+                      summary.resources.redRubies.earnings = earnings;
+                    } else if (news.message.includes('🔷')) {
+                      summary.resources.blueGems.sold = amount;
+                      summary.resources.blueGems.earnings = earnings;
+                    } else if (news.message.includes('🌱')) {
+                      summary.resources.greenPoison.sold = amount;
+                      summary.resources.greenPoison.earnings = earnings;
+                    }
+                  }
+                });
+                
+                // Get dump earnings from news
+                const dumpNews = salesNews.filter(news => 
+                  news.day === day && news.message.includes(playerName) && news.message.includes('dumped')
+                );
+                
+                dumpNews.forEach(news => {
+                  // Parse news like "🚨 Dave emergency dumped 2 🌱 for $20"
+                  const match = news.message.match(/dumped \d+ [💎🔻🔷🌱] for \$(\d+)/);
+                  if (match) {
+                    summary.dumpEarnings += parseInt(match[1]);
+                  }
+                });
+                
+                // Calculate total earnings
+                summary.totalEarnings = 
+                  summary.resources.whiteDiamonds.earnings +
+                  summary.resources.redRubies.earnings +
+                  summary.resources.blueGems.earnings +
+                  summary.resources.greenPoison.earnings +
+                  summary.dumpEarnings;
+                
+                summaries.push(summary);
+              }
+              
+              res.json({
+                currentDay: currentDay,
+                playerName: playerName,
+                summaries: summaries
+              });
+            });
+          }
+        );
+      }
+    );
+  });
+});
+
 // Helper function for time formatting
 function getTimeAgo(date) {
   const now = new Date();
