@@ -284,14 +284,7 @@
         border-radius: 8px;
       }
       
-      /* Market News mobile consistency */
-      #marketNewsContainer .resource-amount {
-        font-size: 1rem !important;
-      }
       
-      #marketNewsContainer table {
-        font-size: 1rem;
-      }
       
       h2 {
         font-size: 1.2rem;
@@ -780,10 +773,7 @@
       min-width: 50px;
     }
     
-    /* Ensure Market News numbers stay consistent on mobile */
-    #marketNewsContainer .resource-amount {
-      font-size: 1rem !important;
-    }
+
 
     .resource-amount.mined {
       color: #00ff00;
@@ -1351,159 +1341,11 @@
           flex-wrap: wrap;
         }
 
-        .news-toggle {
-          padding: 8px 15px;
-          font-size: 0.9rem;
-          font-family: 'Orbitron', monospace;
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-radius: 8px;
-          background: rgba(255, 255, 255, 0.05);
-          color: #ccc;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
 
-        .news-toggle.active {
-          background: rgba(0, 255, 255, 0.2);
-          border-color: rgba(0, 255, 255, 0.5);
-          color: #00ffff;
-        }
 
-        .news-toggle:hover {
-          background: rgba(255, 255, 255, 0.1);
-          transform: translateY(-1px);
-        }
 
-        #newsFilter {
-          padding: 8px 12px;
-          background: rgba(255, 255, 255, 0.1);
-          border: 2px solid rgba(255, 255, 255, 0.3);
-          border-radius: 8px;
-          color: white;
-          font-family: 'Space Mono', monospace;
-          font-size: 0.9rem;
-        }
 
-        .news-day-section {
-          margin-bottom: 25px;
-          border: 1px solid rgba(255, 255, 255, 0.1);
-          border-radius: 12px;
-          overflow: hidden;
-          background: rgba(255, 255, 255, 0.02);
-        }
 
-        .news-day-header {
-          background: rgba(0, 255, 255, 0.1);
-          border-bottom: 1px solid rgba(0, 255, 255, 0.3);
-          padding: 12px 20px;
-          cursor: pointer;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-family: 'Orbitron', monospace;
-      font-weight: bold;
-          color: #00ffff;
-          transition: all 0.3s ease;
-        }
-
-        .news-day-header:hover {
-          background: rgba(0, 255, 255, 0.15);
-        }
-
-        .news-day-header.collapsed {
-          border-bottom: none;
-        }
-
-        .day-title {
-          font-size: 1.1rem;
-        }
-
-        .day-stats {
-          font-size: 0.8rem;
-          color: #aaa;
-      display: flex;
-          gap: 15px;
-        }
-
-        .collapse-icon {
-          font-size: 1.2rem;
-          transition: transform 0.3s ease;
-        }
-
-        .collapse-icon.collapsed {
-          transform: rotate(-90deg);
-        }
-
-        .news-day-content {
-          padding: 15px;
-      display: block;
-        }
-
-        .news-day-content.collapsed {
-          display: none;
-        }
-
-        .news-category {
-          margin-bottom: 20px;
-        }
-
-        .news-category:last-child {
-          margin-bottom: 0;
-        }
-
-        .news-category-header {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 10px;
-          font-family: 'Orbitron', monospace;
-      font-weight: bold;
-          font-size: 0.95rem;
-        }
-
-        .category-icon {
-          font-size: 1.1rem;
-          filter: drop-shadow(0 0 8px currentColor);
-        }
-
-        .category-raid .category-icon { color: #ff6666; }
-        .category-mining .category-icon { color: #66ff66; }
-        .category-market .category-icon { color: #ffaa00; }
-        .category-general .category-icon { color: #66ccff; }
-
-        .news-items {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-
-        .news-item {
-          padding: 8px 15px;
-          margin: 5px 0;
-          border-radius: 6px;
-          font-size: 0.9rem;
-          line-height: 1.4;
-          border-left: 3px solid;
-          background: rgba(255, 255, 255, 0.03);
-          transition: all 0.2s ease;
-        }
-
-        .news-item:hover {
-          background: rgba(255, 255, 255, 0.08);
-          transform: translateX(5px);
-        }
-
-        .news-item.priority-3 {
-          font-weight: bold;
-          background: rgba(255, 255, 0, 0.05);
-        }
-
-        .news-item.priority-2 {
-          font-weight: 500;
-        }
-
-        .news-item.raid { border-left-color: #ff6666; }
-        .news-item.block { border-left-color: #66ccff; }
 
         .no-news {
           text-align: center;
@@ -1643,59 +1485,128 @@
           box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
 
-        /* Leaderboard Styles */
+        /* Enhanced Leaderboard Styles */
         .leaderboard-container {
           display: flex;
-          gap: 40px;
+          gap: 30px;
           justify-content: center;
-          margin-top: 20px;
+          margin-top: 25px;
+          padding: 0 20px;
         }
 
         .leaderboard-column {
           flex: 1;
-          max-width: 300px;
-          text-align: center;
+          max-width: 350px;
+          background: rgba(0, 0, 0, 0.4);
+          border-radius: 15px;
+          padding: 20px;
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .leaderboard-column h3 {
-          margin-bottom: 20px;
-          padding: 15px;
-          border-radius: 8px;
-          font-size: 1.2rem;
+          margin-bottom: 25px;
+          padding: 18px 25px;
+          border-radius: 12px;
+          font-size: 1.3rem;
           font-weight: bold;
+          font-family: 'Orbitron', monospace;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          position: relative;
+          overflow: hidden;
+          box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
-        .leaderboard-column h3:first-child {
-          background: linear-gradient(135deg, #ffd700, #ffed4e);
+        .leaderboard-column:first-child h3 {
+          background: linear-gradient(135deg, #ffd700, #ffed4e, #ffa500);
           color: #000;
+          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+          animation: goldGlow 2s ease-in-out infinite alternate;
         }
 
-        .leaderboard-column h3:last-child {
-          background: linear-gradient(135deg, #ff6b6b, #ff8e8e);
+        .leaderboard-column:last-child h3 {
+          background: linear-gradient(135deg, #ff4757, #ff6b7d, #c44569);
           color: #fff;
+          text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+          animation: redGlow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes goldGlow {
+          from { box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3), 0 0 25px rgba(255, 215, 0, 0.2); }
+          to { box-shadow: 0 4px 20px rgba(255, 215, 0, 0.5), 0 0 35px rgba(255, 215, 0, 0.3); }
+        }
+
+        @keyframes redGlow {
+          from { box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3), 0 0 25px rgba(255, 71, 87, 0.2); }
+          to { box-shadow: 0 4px 20px rgba(255, 71, 87, 0.5), 0 0 35px rgba(255, 71, 87, 0.3); }
         }
 
         .leaderboard-names {
           display: flex;
           flex-direction: column;
-          gap: 15px;
+          gap: 12px;
         }
 
-        .leaderboard-name {
-          padding: 12px 20px;
-          background: rgba(255, 255, 255, 0.1);
-          border: 2px solid rgba(255, 255, 255, 0.2);
-          border-radius: 8px;
+        .leaderboard-name, .leaderboard-player {
+          padding: 15px 20px;
+          background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+          border: 2px solid rgba(0, 255, 255, 0.3);
+          border-radius: 10px;
           font-size: 1.1rem;
           font-weight: bold;
+          font-family: 'Space Mono', monospace;
           color: #fff;
+          text-align: center;
           transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
         }
 
-        .leaderboard-name:hover {
-          transform: translateY(-2px);
-          border-color: rgba(255, 255, 255, 0.4);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        .leaderboard-column:first-child .leaderboard-name,
+        .leaderboard-column:first-child .leaderboard-player {
+          border-color: rgba(255, 215, 0, 0.5);
+          background: linear-gradient(135deg, rgba(255, 215, 0, 0.15), rgba(255, 215, 0, 0.05));
+        }
+
+        .leaderboard-column:last-child .leaderboard-name,
+        .leaderboard-column:last-child .leaderboard-player {
+          border-color: rgba(255, 71, 87, 0.5);
+          background: linear-gradient(135deg, rgba(255, 71, 87, 0.15), rgba(255, 71, 87, 0.05));
+        }
+
+        .leaderboard-name:hover, .leaderboard-player:hover {
+          transform: translateY(-3px) scale(1.02);
+          border-color: rgba(0, 255, 255, 0.7);
+          background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(0, 255, 255, 0.1));
+          box-shadow: 0 8px 25px rgba(0, 255, 255, 0.3), 0 0 20px rgba(0, 255, 255, 0.2);
+          text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .leaderboard-column:first-child .leaderboard-name:hover,
+        .leaderboard-column:first-child .leaderboard-player:hover {
+          border-color: rgba(255, 215, 0, 0.8);
+          background: linear-gradient(135deg, rgba(255, 215, 0, 0.25), rgba(255, 215, 0, 0.1));
+          box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4), 0 0 20px rgba(255, 215, 0, 0.3);
+          text-shadow: 0 0 10px rgba(255, 215, 0, 0.6);
+        }
+
+        .leaderboard-column:last-child .leaderboard-name:hover,
+        .leaderboard-column:last-child .leaderboard-player:hover {
+          border-color: rgba(255, 71, 87, 0.8);
+          background: linear-gradient(135deg, rgba(255, 71, 87, 0.25), rgba(255, 71, 87, 0.1));
+          box-shadow: 0 8px 25px rgba(255, 71, 87, 0.4), 0 0 20px rgba(255, 71, 87, 0.3);
+          text-shadow: 0 0 10px rgba(255, 71, 87, 0.6);
+        }
+
+        .no-data {
+          padding: 20px;
+          color: #666;
+          font-style: italic;
+          text-align: center;
+          background: rgba(255, 255, 255, 0.05);
+          border-radius: 8px;
+          border: 1px dashed rgba(255, 255, 255, 0.2);
         }
 
         .reset-btn {
@@ -1965,6 +1876,98 @@
           padding: 20px;
         }
 
+        /* Past Days Section Styles */
+        .past-days-section {
+          margin-top: 25px;
+          padding: 20px;
+          background: rgba(0, 255, 255, 0.05);
+          border: 2px solid rgba(0, 255, 255, 0.2);
+          border-radius: 12px;
+          backdrop-filter: blur(10px);
+        }
+
+        .past-days-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 15px;
+        }
+
+        .past-days-icon {
+          font-size: 1.3rem;
+          filter: drop-shadow(0 0 8px #00ffff);
+        }
+
+        .past-days-label {
+          font-family: 'Orbitron', monospace;
+          font-weight: bold;
+          font-size: 1.1rem;
+          color: #00ffff;
+          text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+          margin: 0;
+        }
+
+        .past-days-select {
+          width: 100%;
+          padding: 12px 16px;
+          font-family: 'Space Mono', monospace;
+          font-size: 1rem;
+          background: rgba(0, 0, 0, 0.8);
+          border: 2px solid rgba(0, 255, 255, 0.4);
+          border-radius: 8px;
+          color: #00ffff;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          outline: none;
+        }
+
+        .past-days-select:hover {
+          border-color: rgba(0, 255, 255, 0.6);
+          background: rgba(0, 255, 255, 0.05);
+          box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+        }
+
+        .past-days-select:focus {
+          border-color: #00ffff;
+          box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        }
+
+        .past-days-select option {
+          background: rgba(0, 0, 0, 0.95);
+          color: #00ffff;
+          padding: 10px;
+        }
+
+        .past-summary-container {
+          margin-top: 20px;
+          display: none;
+          padding: 20px;
+          background: rgba(0, 255, 255, 0.03);
+          border: 1px solid rgba(0, 255, 255, 0.15);
+          border-radius: 10px;
+          animation: slideInUp 0.3s ease-out;
+        }
+
+        .past-summary-container h3 {
+          color: #00ffff !important;
+          font-family: 'Orbitron', monospace;
+          text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+          margin-bottom: 15px !important;
+          border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+          padding-bottom: 10px;
+        }
+
+        @keyframes slideInUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         @media (max-width: 768px) {
           .personal-summary-grid {
             grid-template-columns: repeat(2, 1fr);
@@ -1980,6 +1983,29 @@
           }
           
           .resource-amount {
+            font-size: 1rem;
+          }
+          
+          /* Mobile Leaderboard Styles */
+          .leaderboard-container {
+            flex-direction: column;
+            gap: 20px;
+            padding: 0 10px;
+          }
+          
+          .leaderboard-column {
+            max-width: none;
+            padding: 15px;
+          }
+          
+          .leaderboard-column h3 {
+            font-size: 1.1rem;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+          }
+          
+          .leaderboard-name, .leaderboard-player {
+            padding: 12px 15px;
             font-size: 1rem;
           }
         }
@@ -2029,15 +2055,18 @@
           </div>
           
           <!-- Past Days Dropdown -->
-          <div class="past-days-section" style="margin-top: 20px;">
-            <label for="pastDaysSelect" style="color: #00ff00; font-weight: bold; margin-right: 10px;">View Past Days:</label>
-            <select id="pastDaysSelect" style="background: rgba(0, 0, 0, 0.7); color: #00ff00; border: 1px solid #00ff00; padding: 5px; border-radius: 5px;">
-              <option value="">Select a day...</option>
+          <div class="past-days-section">
+            <div class="past-days-header">
+              <span class="past-days-icon">📅</span>
+              <label for="pastDaysSelect" class="past-days-label">Historical Data Archive</label>
+            </div>
+            <select id="pastDaysSelect" class="past-days-select">
+              <option value="">📊 Select previous day...</option>
             </select>
           </div>
           
           <!-- Past Day Summary Display -->
-          <div id="pastSummaryContainer" style="margin-top: 15px; display: none;">
+          <div id="pastSummaryContainer" class="past-summary-container">
             <!-- Past day summary will be displayed here -->
           </div>
         </div>
@@ -2056,13 +2085,14 @@
           </div>
         </div>
 
-        <!-- Daily News -->
+        <!-- Raid News -->
         <section class="decision-section">
-          <h2>📰 Daily News</h2>
+          <h2>⚔️ Raid News</h2>
+          <p>Recent raid activities and results from the past few days.</p>
           
-          <!-- News Container -->
+          <!-- Raid News Container -->
           <div id="raidNewsContainer">
-            <div class="loading-status">Loading news...</div>
+            <div class="loading-status">Loading raid news...</div>
           </div>
         </section>
 
@@ -2122,16 +2152,6 @@
                 </div>
           </div>
         </div>
-
-        <div class="decision-section">
-            <h2>📊 Market News</h2>
-            <p>Prior sell prices with market adjustments</p>
-            <div id="marketNewsContainer">
-              <div class="loading-status">Loading market news...</div>
-          </div>
-    </div>
-
-
 
         <!-- Selling Decisions (FIRST - MORNING) -->
     <div class="decision-section">
@@ -2502,10 +2522,7 @@
         let currentDumpAmount = 1;
         let selectedDumpResource = 'none';
 
-        // News display variables
-        let currentNewsView = 'structured';
-        let currentNewsFilter = 'all';
-        let newsCategories = {};
+
 
         function getResourceIcon(resource) {
             switch(resource) {
@@ -2664,11 +2681,9 @@
         function adjustSell(resource, amount) {
             const currentSell = sellAssignments[resource];
             const availableStock = gameData.player?.stockpiles[resource] || 0;
-            const protectedStock = gameData.player?.protectedResources[resource] || 0;
-            const totalAvailable = availableStock + protectedStock;
 
             if (amount > 0) {
-                if (currentSell < totalAvailable && currentSell < 15) { // Max 15 per resource
+                if (currentSell < availableStock && currentSell < 15) { // Max 15 per resource
                     sellAssignments[resource] = currentSell + amount;
                 } else {
                     showMessage(`Cannot sell more than 15 units or more than you have of ${resource}!`, 'error');
@@ -2875,15 +2890,15 @@
             // Update player icon based on race/name if needed
             const playerIconElement = document.getElementById('playerIcon');
             if (playerIconElement) {
-                // Example: Set icon based on race or name
+                // Set tribal icons based on player name
                 switch (gameData.player?.name) {
-                    case 'Dave': playerIconElement.textContent = '🐻'; break;
-                    case 'Silas': playerIconElement.textContent = '🦊'; break;
-                    case 'Chris': playerIconElement.textContent = '🐺'; break;
-                    case 'Brian': playerIconElement.textContent = '🦁'; break;
-                    case 'Joel': playerIconElement.textContent = '🐯'; break;
-                    case 'Curtis': playerIconElement.textContent = '🐼'; break;
-                    default: playerIconElement.textContent = '👽'; // Default icon
+                    case 'Dave': playerIconElement.textContent = '🐻'; break;    // Bear Tribe - Strong and resilient
+                    case 'Silas': playerIconElement.textContent = '🦎'; break;   // Lizard Tribe - Cunning strategists
+                    case 'Chris': playerIconElement.textContent = '☀️'; break;   // Sun Burst Tribe - Fierce warriors
+                    case 'Brian': playerIconElement.textContent = '🧠'; break;   // Brain Tribe - Intelligent rulers
+                    case 'Joel': playerIconElement.textContent = '🦁'; break;    // Lion Tribe - Powerful fighters
+                    case 'Curtis': playerIconElement.textContent = '🪣'; break;  // Water Bucket Tribe - Peaceful survivors
+                    default: playerIconElement.textContent = '👽'; // Default alien icon
                 }
             }
         }
@@ -2948,8 +2963,7 @@
                     if (sellMinus) sellMinus.disabled = sellAssignments[resource] === 0;
                     if (sellPlus) {
           const available = gameData.player.stockpiles[resource] || 0;
-                        const protectedRes = gameData.player.protectedResources?.[resource] || 0;
-                        const maxSell = Math.min(available + protectedRes, 15); // Max 15 or what's available
+                        const maxSell = Math.min(available, 15); // Max 15 or what's available
                         sellPlus.disabled = sellAssignments[resource] >= maxSell;
                     }
                 });
@@ -3038,8 +3052,7 @@
               
               resources.forEach((resource, index) => {
                 const available = gameData.player.stockpiles[resource] || 0;
-                const protected = gameData.player.protectedResources?.[resource] || 0;
-                const total = available + protected;
+                const total = available;
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -3079,22 +3092,10 @@
                 }
             }
             
-            // Load market news with fresh game data
-            loadMarketNews();
 
 
-            // Update news feed (old simple feed) - this will be replaced by updateNewsDisplay
-            // const newsFeed = document.getElementById('newsFeed');
-            // newsFeed.innerHTML = '';
-            // if (gameData.news && gameData.news.length > 0) {
-            //   gameData.news.forEach(message => {
-            //     const p = document.createElement('p');
-            //     p.textContent = message;
-            //     newsFeed.appendChild(p);
-            //   });
-            // } else {
-            //   newsFeed.innerHTML = '<p>No new transmissions.</p>';
-            // }
+
+
 
             // Update leaderboard
             if (gameData.leaderboard && gameData.leaderboard.winning && gameData.leaderboard.losing) {
@@ -3180,6 +3181,12 @@
           
           // Load colony stockpiles
           loadColonyStockpiles();
+          
+          // Load news
+          loadNews();
+          
+          // Load leaderboard
+          loadLeaderboard();
         }
 
         // Load and display player status
@@ -3363,7 +3370,65 @@
             });
         }
 
+        // Load and display news
+        function loadNews() {
+          fetch('/news/3')
+            .then(res => res.json())
+            .then(data => {
+              if (data.error) {
+                console.error('Failed to load news:', data.error);
+                return;
+              }
+              
+              displaySimpleRaidNews(data.newsByDay);
+            })
+            .catch(err => {
+              console.error('Error loading news:', err);
+            });
+        }
 
+        // Load and display leaderboard
+        function loadLeaderboard() {
+          fetch('/leaderboard')
+            .then(res => res.json())
+            .then(data => {
+              if (data.error) {
+                console.error('Failed to load leaderboard:', data.error);
+                return;
+              }
+              
+              displayLeaderboard(data);
+            })
+            .catch(err => {
+              console.error('Error loading leaderboard:', err);
+            });
+        }
+
+        // Display leaderboard
+        function displayLeaderboard(data) {
+          const winningColumn = document.getElementById('winningColumn');
+          const losingColumn = document.getElementById('losingColumn');
+          
+          if (!winningColumn || !losingColumn) return;
+          
+          // Display winning players
+          if (data.winning && data.winning.length > 0) {
+            winningColumn.innerHTML = data.winning.map(player => 
+              `<div class="leaderboard-player">🏆 ${player.name}</div>`
+            ).join('');
+          } else {
+            winningColumn.innerHTML = '<div class="no-data">👑 No champions yet</div>';
+          }
+          
+          // Display losing players
+          if (data.losing && data.losing.length > 0) {
+            losingColumn.innerHTML = data.losing.map(player => 
+              `<div class="leaderboard-player">💀 ${player.name}</div>`
+            ).join('');
+          } else {
+            losingColumn.innerHTML = '<div class="no-data">💀 No players yet</div>';
+          }
+        }
 
         // Display colony stockpiles in the table
         function displayColonyStockpiles(data) {
@@ -3399,8 +3464,7 @@
             const row = document.createElement('tr');
             
             const resourceCells = ['whiteDiamonds', 'redRubies', 'blueGems', 'greenPoison'].map(resource => {
-              const stockpile = player.stockpiles[resource];
-              const total = stockpile.amount || 0;
+              const total = player[resource] || 0;
               
               return `<td><span class="resource-amount">${total}</span></td>`;
             }).join('');
@@ -3488,6 +3552,21 @@
             const modalWinnerCreditsElement = document.getElementById('modalWinnerCredits');
             if (modalWinnerCreditsElement) modalWinnerCreditsElement.textContent = gameResult.winner.credits;
             
+            // Update winner tribal icon and race
+            const modalWinnerTribeElement = document.getElementById('modalWinnerTribe');
+            if (modalWinnerTribeElement) {
+                let tribeIcon = '👽'; // Default
+                switch (gameResult.winner.name) {
+                    case 'Dave': tribeIcon = '🐻'; break;    // Bear Tribe
+                    case 'Silas': tribeIcon = '🦎'; break;   // Lizard Tribe
+                    case 'Chris': tribeIcon = '☀️'; break;   // Sun Burst Tribe
+                    case 'Brian': tribeIcon = '🧠'; break;   // Brain Tribe
+                    case 'Joel': tribeIcon = '🦁'; break;    // Lion Tribe
+                    case 'Curtis': tribeIcon = '🪣'; break;  // Water Bucket Tribe
+                }
+                modalWinnerTribeElement.textContent = `${tribeIcon} ${gameResult.winner.race || 'Unknown Tribe'}`;
+            }
+            
             // Update final standings
             const standingsTable = document.getElementById('finalStandingsTable');
             if (standingsTable) { // Add null check
@@ -3573,7 +3652,7 @@
               }
               
               // Reload news to show latest updates
-              loadRaidNews();
+              loadNews();
               
               // Load personal summary
               loadPersonalSummary();
@@ -3646,6 +3725,19 @@
               const dumpAmountSection = document.getElementById('dumpAmountSection');
               if (dumpAmountSection) dumpAmountSection.style.display = 'none';
               updateDumpOptions(); // Refresh dump options
+              
+              // Reset dice roll state for new day
+              hasRolled = false;
+              rollResult = null;
+              const rollButton = document.getElementById('rollDiceButton');
+              if (rollButton) {
+                rollButton.disabled = false;
+                rollButton.textContent = '🎲 Roll Dice';
+                rollButton.style.opacity = '1';
+                rollButton.style.cursor = 'pointer';
+              }
+              const diceResultElement = document.getElementById('diceResult');
+              if (diceResultElement) diceResultElement.textContent = 'Roll: ?';
               
               // Clear submission status for the processed day
               const processedDay = gameData?.gameState?.currentDay || 1;
@@ -3832,333 +3924,62 @@
           });
         }
 
-        // Raid News functions
-        // Load most recent news only
-        function loadRaidNews() {
-          console.log('🔍 Loading most recent news...');
-          fetch('/structured-news/1')
-            .then(res => res.json())
-            .then(data => {
-              if (data.error) {
-                console.error('Failed to load news:', data.error);
-                return;
-              }
-              console.log('🔍 News data received:', data);
-              console.log('🔍 Structured news:', data.structuredNews);
-              displayRaidNews(data.structuredNews);
-            })
-            .catch(err => {
-              console.error('Error loading news:', err);
-            });
-        }
 
-        // Display most recent news in a simple format
-        function displayRaidNews(newsData) {
-          console.log('🔍 displayRaidNews called with:', newsData);
-          
+        
+        // Simple function to display only raid news
+        function displaySimpleRaidNews(newsByDay) {
           const container = document.getElementById('raidNewsContainer');
           if (!container) return;
           
-          if (!newsData || newsData.length === 0) {
-            console.log('🔍 No news data, showing "No news available"');
-            container.innerHTML = '<div class="no-news">No news available</div>';
+          if (!newsByDay || Object.keys(newsByDay).length === 0) {
+            container.innerHTML = '<div class="no-news">No raid news available yet.</div>';
             return;
           }
           
-          console.log('🔍 Processing news data for', newsData.length, 'days');
+          let newsHTML = '<div class="raid-news-section">';
           
-          container.innerHTML = '';
+          // Sort days in descending order (newest first)
+          const sortedDays = Object.keys(newsByDay).sort((a, b) => parseInt(b) - parseInt(a));
           
-          newsData.forEach((dayData, index) => {
-            console.log(`🔍 Day ${index + 1} data:`, dayData);
+          sortedDays.forEach(day => {
+            const dayNews = newsByDay[day];
+            // Filter for raid-related messages only
+            const raidMessages = dayNews.filter(message => 
+              message.includes('raided') || message.includes('raid') || message.includes('failed!')
+            );
             
-            // Show all news categories for each day
-            const allNews = [];
-            Object.keys(dayData).forEach(category => {
-              if (category !== 'day' && Array.isArray(dayData[category])) {
-                dayData[category].forEach(news => {
-                  allNews.push({ ...news, category });
-                });
-              }
-            });
-            
-            console.log(`🔍 Day ${dayData.day}: ${allNews.length} total news items`);
-            
-            if (allNews.length > 0) {
-              const daySection = document.createElement('div');
-              daySection.className = 'news-day-section';
-              daySection.innerHTML = `
-                <div class="news-day-header">
-                  <div class="day-title">📅 Day ${dayData.day}</div>
-                  <div class="day-stats">
-                    <span>📰 ${allNews.length} news items</span>
-                  </div>
-                </div>
-                <div class="news-day-content">
-                  ${allNews.map(news => {
-                    const icon = getNewsIcon(news.category);
-                    const color = getNewsColor(news.category);
-                    return `<div class="news-item" style="color: ${color}">${icon} ${news.message}</div>`;
-                  }).join('')}
-                </div>
-              `;
-              container.appendChild(daySection);
-        } else {
-              console.log(`🔍 Day ${dayData.day}: No news to display`);
-            }
-          });
-        }
-        
-        // Helper function to get news icon based on category
-        function getNewsIcon(category) {
-          const icons = {
-            raid: '⚔️',
-            block: '🛡️',
-            market: '💰',
-            mining: '⛏️',
-            general: '📰'
-          };
-          return icons[category] || '📰';
-        }
-        
-        // Helper function to get news color based on category
-        function getNewsColor(category) {
-          const colors = {
-            raid: '#ff6666',
-            block: '#66ccff',
-            market: '#ffcc00',
-            mining: '#66cc66',
-            general: '#cccccc'
-          };
-          return colors[category] || '#cccccc';
-        }
-
-        // Load and display market news
-        let marketNewsLoading = false; // Prevent multiple simultaneous calls
-        
-        function loadMarketNews() {
-          if (marketNewsLoading) {
-            console.log('Market News - Already loading, skipping duplicate call');
-            return;
-          }
-          
-          marketNewsLoading = true;
-          const playerId = localStorage.getItem('playerId');
-          if (!playerId) {
-            console.error('No player ID found for market news');
-            marketNewsLoading = false;
-            return;
-          }
-          
-          console.log('Market News - Loading fresh data...');
-          
-          fetch('/game-data/' + playerId)
-            .then(res => res.json())
-            .then(data => {
-              if (data.error) {
-                console.error('Failed to load market news:', data.error);
-            return;
-              }
-              displayMarketNews(data.gameState);
-            })
-            .catch(err => {
-              console.error('Error loading market news:', err);
-            })
-            .finally(() => {
-              marketNewsLoading = false;
-            });
-        }
-
-        // Display market news in table format
-        function displayMarketNews(gameState) {
-          const container = document.getElementById('marketNewsContainer');
-          if (!container) return;
-          
-          console.log('Market News - Game State:', gameState); // Debug log
-          
-          if (!gameState || !gameState.currentDay) {
-            container.innerHTML = '<div class="no-news">No market data available</div>';
-            return;
-          }
-          
-          const currentDay = gameState.currentDay;
-          const priceHistory = gameState.priceHistory || [];
-          
-          console.log('Market News - Price History:', priceHistory); // Debug log
-          console.log('Market News - Current Day:', currentDay); // Debug log
-          console.log('Market News - Price History Details:', JSON.stringify(priceHistory, null, 2)); // Detailed log
-          console.log('Market News - Full Game State Keys:', Object.keys(gameState)); // See all available data
-          console.log('Market News - Price History Type:', typeof priceHistory); // Check if it's an array
-          console.log('Market News - Price History Length:', priceHistory.length); // Check length
-          
-          if (priceHistory.length === 0) {
-            container.innerHTML = '<div class="no-news">No price history available yet. Game may need to progress to Day 2+ for price data.</div>';
-            return;
-          }
-          
-          // Debug: Check if we're getting the right data structure
-          console.log('Market News - First day data:', priceHistory[0]);
-          console.log('Market News - All days data:', priceHistory);
-          
-          // Create table similar to colony stockpiles
-          const table = document.createElement('table');
-          table.className = 'colony-stockpiles-table';
-          
-          // Create header
-          const thead = document.createElement('thead');
-          thead.innerHTML = `
-            <tr>
-              <th></th>
-              <th>💎</th>
-              <th>🔻</th>
-              <th>🔷</th>
-              <th>🌱</th>
-            </tr>
-          `;
-          table.appendChild(thead);
-          
-          // Create body with rows for all prior days
-          const tbody = document.createElement('tbody');
-          
-          // Show all days from price history
-          priceHistory.forEach((dayData, index) => {
-            const row = document.createElement('tr');
-            // Only show "Base Price" for the first entry (index 0), show "Day X" for all others
-            const dayLabel = index === 0 ? 'Base Price' : `Day ${dayData.day}`;
-            row.innerHTML = `
-              <td><strong>${dayLabel}</strong></td>
-              <td><span class="resource-amount">$${dayData.whiteDiamonds}</span></td>
-              <td><span class="resource-amount">$${dayData.redRubies}</span></td>
-              <td><span class="resource-amount">$${dayData.blueGems}</span></td>
-              <td><span class="resource-amount">$${dayData.greenPoison}</span></td>
-            `;
-            tbody.appendChild(row);
-          });
-          
-          table.appendChild(tbody);
-          
-          container.innerHTML = '';
-          container.appendChild(table);
-        }
-
-
-
-        // Create a day section for structured news
-        function createDaySection(dayData) {
-          const section = document.createElement('div');
-          section.className = 'news-day-section';
-          
-          // Calculate stats for this day
-          const totalItems = ['raid', 'block']
-            .reduce((sum, cat) => sum + (dayData[cat] ? dayData[cat].length : 0), 0);
-          
-          const categoryStats = ['raid', 'block']
-            .map(cat => newsCategories[cat] && dayData[cat] && dayData[cat].length > 0 ? `${newsCategories[cat]?.icon || ''}${dayData[cat].length}` : '')
-            .filter(stat => stat)
-            .join(' ');
-          
-          // Create header
-          const header = document.createElement('div');
-          header.className = 'news-day-header';
-          header.innerHTML = `
-            <div class="day-title">📅 Day ${dayData.day}</div>
-            <div class="day-stats">
-              <span>${totalItems} updates</span>
-              <span>${categoryStats}</span>
-            </div>
-            <div class="collapse-icon">🔽</div>
-          `;
-          
-          // Create content
-          const content = document.createElement('div');
-          content.className = 'news-day-content';
-          
-          // Add summary if day has multiple categories
-          if (totalItems > 5) {
-            const summary = document.createElement('div');
-            summary.className = 'news-summary';
-            summary.innerHTML = `
-              <div class="summary-stats">
-                ${['raid', 'mining', 'market', 'general'].map(cat => {
-                  const count = dayData[cat] ? dayData[cat].length : 0;
-                  return count > 0 ? `<span class="stat-item">${newsCategories[cat]?.icon || ''}${count}</span>` : '';
-                }).filter(item => item).join('')}
-              </div>
-            `;
-            content.appendChild(summary);
-          }
-          
-          // Add categories
-          ['raid', 'mining', 'market', 'general'].forEach(category => {
-            if (dayData[category] && dayData[category].length > 0) {
-              if (currentNewsFilter === 'all' || currentNewsFilter === category) {
-                const categorySection = createCategorySection(category, dayData[category]);
-                content.appendChild(categorySection);
-              }
+            if (raidMessages.length > 0) {
+              newsHTML += `<div class="day-section" style="margin-bottom: 20px; padding: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">`;
+              newsHTML += `<h4 style="color: #00ffff; margin-bottom: 10px;">📅 Day ${day} Raids:</h4>`;
+              
+              raidMessages.forEach(message => {
+                let messageColor = '#00ff00'; // green for success
+                if (message.includes('failed')) {
+                  messageColor = '#ff6666'; // red for failure
+                }
+                newsHTML += `<div style="color: ${messageColor}; margin: 5px 0; padding: 5px; font-family: Arial, sans-serif;">${message}</div>`;
+              });
+              
+              newsHTML += `</div>`;
             }
           });
           
-          // Add click handler for collapse/expand
-          header.addEventListener('click', () => {
-            const isCollapsed = content.style.display === 'none';
-            content.style.display = isCollapsed ? 'block' : 'none';
-            const icon = header.querySelector('.collapse-icon');
-            if (icon) icon.textContent = isCollapsed ? '🔽' : '🔼'; // Add null check
-            header.classList.toggle('collapsed', !isCollapsed);
-          });
+          if (newsHTML === '<div class="raid-news-section">') {
+            newsHTML += '<div class="no-news">No raid activities yet.</div>';
+          }
           
-          section.appendChild(header);
-          section.appendChild(content);
+          newsHTML += '</div>';
           
-          return section;
+          container.innerHTML = newsHTML;
         }
+        
 
-        // Create a category section
-        function createCategorySection(category, items) {
-          const section = document.createElement('div');
-          section.className = `news-category category-${category}`;
-          
-          const header = document.createElement('div');
-          header.className = 'news-category-header';
-          header.innerHTML = `
-            <span class="category-icon">${newsCategories[category]?.icon || '📰'}</span>
-            <span>${newsCategories[category]?.title || category}</span>
-          `;
-          
-          const itemsList = document.createElement('ul');
-          itemsList.className = 'news-items';
-          
-          items.forEach(item => {
-            const listItem = document.createElement('li');
-            listItem.className = `news-item ${category} priority-${item.priority || 1}`;
-            
-            // Parse the message to add success/failure symbols
-            let displayMessage = item.message;
-            let successSymbol = '';
-            
-            if (category === 'raid') {
-              if (item.message.toLowerCase().includes('fail') || item.message.toLowerCase().includes('blocked')) {
-                successSymbol = ' ❌'; // Red X for failed raids
-              } else {
-                successSymbol = ' ✅'; // Green check for successful raids
-              }
-            } else if (category === 'block') {
-              if (item.message.toLowerCase().includes('success') || item.message.toLowerCase().includes('blocked')) {
-                successSymbol = ' 🛡️'; // Shield for successful blocks
-              } else {
-                successSymbol = ' 💥'; // Explosion for failed blocks
-              }
-            }
-            
-            listItem.textContent = displayMessage + successSymbol;
-            itemsList.appendChild(listItem);
-          });
-          
-          section.appendChild(header);
-          section.appendChild(itemsList);
-          
-          return section;
-        }
+
+
+
+
+
+
 
 
 
@@ -4232,9 +4053,9 @@
             return;
           }
 
-          const playerName = localStorage.getItem('playerName');
-          if (!playerName) {
-            alert('Player name not found. Please refresh the page.');
+          const playerId = localStorage.getItem('playerId');
+          if (!playerId) {
+            alert('Player ID not found. Please refresh the page.');
             return;
           }
 
@@ -4248,9 +4069,8 @@
               'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-              playerName: playerName,
-              message: message,
-              day: currentChatDay
+              playerId: playerId,
+              message: message
             })
           })
             .then(res => res.json())
@@ -4363,19 +4183,24 @@
           const summaries = data.summaries;
           const playerName = data.playerName;
           
-          // Update title
-          const mostRecentDay = summaries.length > 0 ? summaries[0].day : currentDay - 1;
-          document.getElementById('personalSummaryTitle').textContent = 
-            `📊 My Day ${mostRecentDay} Summary`;
-          
           // Display most recent summary
           if (summaries.length === 0) {
+            document.getElementById('personalSummaryTitle').textContent = 
+              `📊 My Day ${currentDay - 1} Summary`;
             document.getElementById('currentSummaryContainer').innerHTML = 
               '<div class="no-summary">No completed days yet. Start making decisions to see your summary!</div>';
             return;
           }
           
-          const latestSummary = summaries[0]; // Most recent day
+          // Find the most recent day (highest day number)
+          const latestSummary = summaries.reduce((latest, current) => {
+            return current.day > latest.day ? current : latest;
+          });
+          
+          // Update title with the actual most recent day
+          document.getElementById('personalSummaryTitle').textContent = 
+            `📊 My Day ${latestSummary.day} Summary`;
+          
           displaySummary(latestSummary, 'currentSummaryContainer');
         }
 
@@ -4390,53 +4215,31 @@
             greenPoison: '🌱'
           };
           
-          let resourcesHTML = '';
+          // Build the summary lines in the exact format requested
+          let summaryLines = [];
+          
+          // Add all 4 resources (always show, even if 0)
           Object.keys(summary.resources).forEach(resource => {
             const data = summary.resources[resource];
-            if (data.sold > 0 || data.earnings > 0) {
-              resourcesHTML += `
-                <div class="resource-summary-card">
-                  <span class="resource-icon">${resourceIcons[resource]}</span>
-                  <div class="resource-amount">${data.sold} sold</div>
-                  <div class="resource-price">@ $${data.price}</div>
-                  <div class="resource-earnings">$${data.earnings}</div>
-                </div>
-              `;
-            }
+            const icon = resourceIcons[resource];
+            summaryLines.push(`${icon} Sold: ${data.sold} @ $${data.price || 0} = $${data.earnings}`);
           });
           
-          if (!resourcesHTML) {
-            resourcesHTML = '<div class="no-summary">No resources sold this day.</div>';
+          // Add dump line (always show, even if 0)
+          summaryLines.push(`🌱 Dump: ${summary.dumpEarnings / 10} @ $10 = $${summary.dumpEarnings}`);
+          
+          // Add day total
+          summaryLines.push(`<strong>Day Total: $${summary.totalEarnings}</strong>`);
+          
+          // Add running total if available
+          if (summary.runningTotal !== undefined) {
+            summaryLines.push(`<strong>Running Total: $${summary.runningTotal}</strong>`);
           }
           
-          const earningsHTML = `
-            <div class="earnings-summary">
-              <div class="earnings-item">
-                <div class="earnings-label">Resources</div>
-                <div class="earnings-value">$${
-                  Object.values(summary.resources).reduce((total, r) => total + r.earnings, 0)
-                }</div>
-              </div>
-              <div class="earnings-item">
-                <div class="earnings-label">Dump</div>
-                <div class="earnings-value">$${summary.dumpEarnings}</div>
-              </div>
-              <div class="earnings-item">
-                <div class="earnings-label">Raids</div>
-                <div class="earnings-value">$${summary.raidEarnings}</div>
-              </div>
-              <div class="earnings-item">
-                <div class="earnings-label">Total</div>
-                <div class="earnings-value total-earnings">$${summary.totalEarnings}</div>
-              </div>
-            </div>
-          `;
-          
           container.innerHTML = `
-            <div class="personal-summary-grid">
-              ${resourcesHTML}
+            <div class="financial-summary" style="font-family: Arial, sans-serif; line-height: 1.8; color: white;">
+              ${summaryLines.map(line => `<div>${line}</div>`).join('')}
             </div>
-            ${earningsHTML}
           `;
         }
 
@@ -4468,7 +4271,7 @@
                 
                 // Update the past summary title
                 pastContainer.innerHTML = `
-                  <h3 style="color: #00ff00; margin-bottom: 15px;">📊 Day ${selectedDay} Summary</h3>
+                  <h3>📊 Day ${selectedDay} Summary</h3>
                   <div id="pastSummaryContent"></div>
                 `;
                 displaySummary(selectedSummary, 'pastSummaryContent');
@@ -4479,8 +4282,25 @@
           });
         }
 
-        // Add event listener for dump resource selection
+        // Initialize game on DOM ready
         document.addEventListener('DOMContentLoaded', function() {
+          // 1. Validate player ID first
+          playerId = localStorage.getItem('playerId');
+          if (!playerId || playerId === '111' || playerId === 'undefined' || playerId === 'null') {
+              // Clear corrupted playerId and redirect to login
+              localStorage.removeItem('playerId');
+              window.location.href = '/';
+              return;
+          }
+          
+          // Validate playerId format (should be a number)
+          if (isNaN(playerId) || playerId <= 0) {
+              localStorage.removeItem('playerId');
+              window.location.href = '/';
+              return;
+          }
+          
+          // 2. Initialize UI components
           const dumpResourceSelect = document.getElementById('dumpResource');
           if (dumpResourceSelect) {
             dumpResourceSelect.addEventListener('change', onDumpResourceChange);
@@ -4497,32 +4317,15 @@
             });
           }
           
-          loadRaidNews(); // Load most recent news on DOMContentLoaded
-          loadChatMessages(); // Load chat messages
-          startChatAutoRefresh(); // Start auto-refresh
-          loadPersonalSummary(); // Load personal summary
-          // Market news will be loaded after game data is loaded
+          // 3. Load initial data
+          loadNews();
+          loadChatMessages();
+          startChatAutoRefresh();
+          loadPersonalSummary();
+          
+          // 4. Load main game data
+          loadGameDataEnhanced();
         });
-
-        document.addEventListener('DOMContentLoaded', () => {
-            playerId = localStorage.getItem('playerId');
-            if (!playerId || playerId === '111' || playerId === 'undefined' || playerId === 'null') {
-                // Clear corrupted playerId and redirect to login
-                localStorage.removeItem('playerId');
-                window.location.href = '/';
-                return;
-            }
-            
-            // Validate playerId format (should be a number)
-            if (isNaN(playerId) || playerId <= 0) {
-                localStorage.removeItem('playerId');
-                window.location.href = '/';
-                return;
-            }
-            
-            // Only load game data if we have a valid playerId
-            loadGameDataEnhanced();
-    });
   </script>
   
   <!-- Logout Button at Bottom -->
