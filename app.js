@@ -873,7 +873,7 @@ app.get('/leaderboard', (req, res) => {
 
 // Reset game
 app.post('/reset-game', (req, res) => {
-  console.log('🔄 Resetting simplified game...');
+  console.log('🔄 Resetting simplified game (including PIN reset)...');
   
   db.serialize(() => {
     db.run('BEGIN TRANSACTION');
@@ -883,14 +883,16 @@ app.post('/reset-game', (req, res) => {
     db.run('DELETE FROM daily_transactions');
     db.run('DELETE FROM daily_snapshots');
     db.run('DELETE FROM simple_news');
+    db.run('DELETE FROM chat_messages');
     
-    // Reset players to starting state
+    // Reset players to starting state (including PIN reset)
     db.run(`UPDATE players SET 
             credits = 0, 
             whiteDiamonds = 1, 
             redRubies = 1, 
             blueGems = 1, 
-            greenPoison = 1`);
+            greenPoison = 1,
+            pin = NULL`);
     
     // Reset game state
     db.run(`UPDATE game_state SET 
